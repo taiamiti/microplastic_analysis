@@ -5,6 +5,7 @@ import sys
 
 from pathlib import Path
 
+import fire
 import numpy as np
 import re
 
@@ -13,7 +14,7 @@ from tqdm import tqdm
 
 import time
 
-from src.custom_logger import loguru_setup
+from src.data_prep.custom_logger import loguru_setup
 import easyocr
 from scipy.optimize import linear_sum_assignment
 from scipy.spatial.distance import cdist
@@ -21,9 +22,9 @@ from scipy.spatial.distance import cdist
 import fiftyone as fo
 from fiftyone import ViewField as F
 
-from src.custom_exceptions import FileNotNamedCorrectly, MultipleNamingConvention
-from src.data_utils import MetaData, get_obs_id, DataPrior
-from src.embeddings import compute_embeddings, load_embedding_centers
+from src.data_prep.custom_exceptions import FileNotNamedCorrectly, MultipleNamingConvention
+from src.data_prep.data_utils import MetaData, get_obs_id, DataPrior
+from src.data_prep.embeddings import compute_embeddings, load_embedding_centers
 from collections import Counter, OrderedDict
 
 # LOG_PATH = "./logs/{}.log".format(Path(__file__).stem)
@@ -289,42 +290,15 @@ def main(dataset_local_path, embedding_center_path, ingested_data_path):
     logger.info("Transform dataset")
     ds, invalid_paths = transform_dataset(ds, prior, embedding_center_path)
     invalid_paths = invalid_paths + bad_paths
+    logger.info(f"Invalid paths: {invalid_paths}")
     logger.info("Export dataset")
     export_with_proper_naming(ds, ingested_data_path)
 
 
 if __name__ == "__main__":
-    try:
-        main_debug()
-        # task = Task.init(project_name=global_config.CLEARML_PROJECT, task_name=os.path.basename(__file__))
-        # config_path = "./configs/config_unit_test.yaml"
-        # # task.connect_configuration(
-        # #     name="config_unit_test",
-        # #     configuration=config_path
-        # # )
-        # config = OmegaConf.load(config_path)
-        # params = {
-        #     'dataset_local_path': config.DATA.RAW.local_path,
-        #     'prior': config.INGEST_DATA.prior,
-        #     'embedding_center_path': config.LOCAL_EMBEDDING_CENTER.local_path,
-        #     'ingested_data_path': config.DATA.INGESTED.local_path
-        # }
-        # task.connect(params)
-        # main(params['dataset_local_path'],
-        #      params['prior'],
-        #      params['embedding_center_path'],
-        #      params['ingested_data_path']
-        #      )
-        # # make it a clearml dataset for upload
-        # dataset = Dataset.get(
-        #     dataset_project=config.CLEARML_PROJECT,
-        #     dataset_name=config.DATA.INGESTED.name,
-        #     auto_create=True,  # create if do not exist
-        #     writable_copy=True  # allows version update if already exist
-        # )
-        # dataset.sync_folder(local_path=config.DATA.INGESTED.local_path)
-        # # add metadata with loggers
-        # dataset.finalize(auto_upload=True)
-    except AssertionError:
-        logger.error("Abort program, fix the issue then retry", exc_info=True)
-        sys.exit(1)
+    # try:
+    #     main_debug()
+    # except AssertionError:
+    #     logger.error("Abort program, fix the issue then retry", exc_info=True)
+    #     sys.exit(1)
+    fire.Fire(main)

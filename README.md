@@ -1,90 +1,100 @@
-~~# My Notes
+# Microplastic analysis
 
-## Install
+**Date** : 16/05/2023  
+**Author** : Taiamiti Edmunds (taiamiti.edmunds@ml4everyone.com)  
+**Goals** : This project aims to automate the analysis of microplastic contamination on the environment from 
+fluorescent microscopy images
 
-Use conda to create a python=3.9 env
+This project contains scripts to :
+- process data
+- annotate data
+- train and evaluate models 
+- perform inference on new data
+
+This code is associated to the publication ** and thesis of Irène Godere
+
+## Overview
+
+The code is structured into 4 parts :
+- data_prep : scripts to prepare data and create image composite
+- labkit_labeling : scripts to analyse, cluster and annotate data
+- modeling : train and eval scripts
+- export : export dataset (fiftyone) with ground truths or predictions to csv
+
+The whole pipeline is depicted in the figure below :
+todo
+
+## Installation
+
+There are 2 environments to run the project : one for data engineering (data_prep, labkit_labeling, export) 
+and one for modeling. This is because modeling is based on mmsegmentation framework which has an independent installation 
+procedure which is quite heavy and can conflict with torch installation in data engineering for computing clip embeddings.
+For this reason the two envs are kept separated.
+
+### 1. data engineering env
+
+Use conda to create an environment for data engineering tasks
 ```bash
-conda create -n map python=3.9
-conda activate map
-pip install -r requirements.txt
+conda create -n map_de python=3.9
+conda activate map_de
+pip install -r requirements_de.txt
 ```
+
+### 2. modeling env
+
+Follow the installation instruction of mmsegmentation for the modeling environment 
+(cf [README.md](./mmsegmentation/README.md))
 
 ## Data naming convention
 
-3 cases are handled :
-```python
-from enum import IntEnum
-
-class DataPrior(IntEnum):  # naming convention todo rename this
-    RENAMED = 1  # ex : lot 1
-    PARTIAL_RENAMED = 2  # ex lot2 (only obs id renamed ie: CSED_TAK_S1_UNK_UNK_0001 (1).jpg)
-    CONSECUTIVE = 3  # ex lot3 (not renamed but obs are organized in 4 consecutive images
-    # ie: BENI_MAK_S1_5V_F2_UNK_0000.jpg)
+All files are renamed as follows `{sample_type}_{island}_{station}_{replica}_{distil}_{sample_id}`
+At first, this was done manually, but it was automated later due to inconsistencies and waste of time 
+Hence, we handled 3 cases before full automation as described below :
+- RENAMED = 1  # ex : lot 1 completely renamed manually using the convention
+```text
+├── BENI_TAK_S1_3V_D0_F1_0000_CY2.jpg
+├── BENI_TAK_S1_3V_D0_F1_0000_DAPI.jpg
+├── BENI_TAK_S1_3V_D0_F1_0000_NAT.jpg
+├── BENI_TAK_S1_3V_D0_F1_0000_TRI.jpg
+├── BENI_TAK_S1_3V_D0_F1_0001_CY2.jpg
+├── BENI_TAK_S1_3V_D0_F1_0001_DAPI.jpg
+├── BENI_TAK_S1_3V_D0_F1_0001_NAT.jpg
+├── BENI_TAK_S1_3V_D0_F1_0001_TRI.jpg
+...
 ```
-RENAMED : all files are renamed as follows `{sample_type}_{island}_{station}_{replica}_{distil}_{sample_id}`
-
-## Pipeline
-
-Step 1 : compute embeddings centers for each filters on dataset lot1 and lot2
-`compute_embeddings_filter_centers_lot1.ipynb`
-`compute_embeddings_filter_centers_lot2.ipynb`
-
-Step 2 : ingest data using script `ingest_data.py`
-- find metadata to rename files (zoom, exposition, )
-- filter to maintain 4 images per acquisition (prior to finding filter)
-- infer color based on 4 images using embeddings centers matching
-- keep only zoom = 500 200 + image size = 1920x1200 + new_filter = dapi tri  
-
-
-Step 3 : create and export composite dataset using `create_composite.py`  
-Note : clearml was first used to handle these but was removed due to complications
-instead use pipeline.py to directly call the functions
-
-
-Step 4 : create annotation tasks (manual - varies with datasets lots)  
-At first, we used all the data and made clusters to facilitate labkit annotations 
-using coherent batches so that one Labkit model is able to deal with the whole batch
-
-Refer to `create_tasks_lotx.ipynb`.  
-Refer to `viz_datasets_composite_v2.ipynb` for lot 4.  
-To sample data from lot 5 to 10, refer to `viz_datasets_composite_and_sample_data_for_annotation.ipynb`
-We cluster the data into 15 clusters and take 20 samples from each cluster.
-
-
-Step 5.1 : labkit annotation + labkit inference  
-Use a model per image folder (clusters). Follow the imageJ macro scripts to generate segmentation masks :
+- PARTIAL_RENAMED = 2  # ex lot2 (only obs id renamed)
+```text
+├── CSED_TAK_S1_UNK_UNK_0001 (1).jpg
+├── CSED_TAK_S1_UNK_UNK_0001 (2).jpg
+├── CSED_TAK_S1_UNK_UNK_0001 (3).jpg
+├── CSED_TAK_S1_UNK_UNK_0001 (4).jpg
+├── CSED_TAK_S1_UNK_UNK_0001_bis (3).jpg
+├── CSED_TAK_S1_UNK_UNK_0002 (1).jpg
+├── CSED_TAK_S1_UNK_UNK_0002 (2).jpg
+├── CSED_TAK_S1_UNK_UNK_0002 (3).jpg
+├── CSED_TAK_S1_UNK_UNK_0002 (4).jpg
+...
 ```
-cmdinferencelabkit/labkitmacro_resize_reannot_lot1-4_beni.ijm
-cmdinferencelabkit/labkitmacro_resize_reannot_lot1-4_sed.ijm
-cmdinferencelabkit/labkitmacro_resize_reannot_lot5-10.ijm
+- CONSECUTIVE = 3  # ex lot3 (not renamed but obs are organized in 4 consecutive images)
+```text
+├── BENI_TUB_S3_2V_F3_UNK_0106.jpg
+├── BENI_TUB_S3_2V_F3_UNK_0107.jpg
+├── BENI_TUB_S3_2V_F3_UNK_0108.jpg
+├── BENI_TUB_S3_2V_F3_UNK_0109.jpg
+├── BENI_TUB_S3_2V_F3_UNK_0110.jpg
+├── BENI_TUB_S3_2V_F3_UNK_0111.jpg
+├── BENI_TUB_S3_2V_F3_UNK_0112.jpg
+├── BENI_TUB_S3_2V_F3_UNK_0113.jpg
+...
 ```
 
-Step 5.2 : model inference  
-Use the mmsegmentation inference script to generate segmentation masks :
-```
-mmsegmentation/tools/inference.py
-```
+## Notes on data
 
-Step 6 : generate annotated dataset  
-Refer to the script `generate_annotated_dataset.py`
-
-Step 7 : export CSVs  
-Refer to the script `exporter.py`
-
-
-## Visualize datasets
-
-`viz_datasets.ipynb` : view raw images datasets
-`viz_datasets_composite_and_sample_data_for_annotation.ipynb` : view composite dataset   
-`viz_datasets_composite_v2.ipynb` : ... 
-
-Or directly go to remote_fiftyone project
-
-
-## Notes data
+Data are organized into 11 sets corresponding to acquisitions campaign defined in the project roadmap.
+Those sets are sometimes split into parts to maintain naming convention within each part as shown below :
 
 ```text
-.
+data/raw
 ├── lot1-20-04-2023-benitiers
 ├── lot1-20-04-2023-sediments
 ├── lot2-30-05-2023-tak_nacl
@@ -102,19 +112,112 @@ Or directly go to remote_fiftyone project
 ├── lot8-28-09-2023-benitiers
 ├── lot9-09-10-2023-benitiers
 ├── lot10-09-10-2023-benitiers 
-└── lot11-20-11-2023-eau            # unannotated
+└── lot11-20-11-2023-eau            
 ```
 
-## Modelling
+## Pipeline
+
+### 1. Data preparation
+
+Step 1 : compute embeddings centers for each filters on dataset lot2
+`compute_embeddings_filter_centers_lot2.ipynb`
+We use `lot2` instead of `lot1` because it is more challenging with some overlap 
+between TRI and NAT
+
+
+Step 2 : ingest data using script `ingest_data.py`
+- find metadata to rename files : use OCR to read zoom and use exif to read exposition
+- filter to maintain 4 images per acquisition : this is required to infer the type of filter used as this information 
+is not always correct due to manual renaming. In order to know which images belong to the same observation, multiple cases
+are handled. Refer to the data naming convention section here.
+- infer color based on 4 images using embeddings centers matching
+- filter valid acquisitions : keep only zoom = 500 200 with image size = 1920x1200
+
+```bash
+# to process specific data set
+python src/data_prep/pipeline.py ingest_data configs/default_config.yaml lot1-20-04-2023-benitiers
+
+# to process all the data in default_config.DATA.RAW
+python src/data_prep/pipeline.py ingest_data configs/default_config.yaml all
+```
+
+Step 3 : create and export composite dataset using `create_composite.py`  
+
+```bash
+# to process specific data set
+python src/data_prep/pipeline.py create_composite configs/default_config.yaml lot1-20-04-2023-benitiers
+
+# to process all the data in default_config.DATA.RAW
+python src/data_prep/pipeline.py create_composite configs/default_config.yaml all
+```
+
+
+### 2. labkit_labeling
+
+Step 4 : create annotation tasks (manual - varies with datasets lots)  
+At first, we used all the data and made clusters to facilitate labkit annotations 
+using coherent batches so that one Labkit model is able to deal with the whole batch
+
+Refer to `create_tasks_lotx.ipynb`.  
+Refer to `viz_datasets_composite_v2.ipynb` for lot 4.  
+To sample data from lot 5 to 10, refer to `viz_datasets_composite_and_sample_data_for_annotation.ipynb`
+We cluster the data into 15 clusters and take 20 samples from each cluster.
+
+Step 5 : labkit annotation + labkit inference  
+Use a model per image folder (clusters). Follow the imageJ macro scripts to generate segmentation masks :
+```
+labkit_labeling/labkitmacro_resize_reannot_lot1-4_beni.ijm
+labkit_labeling/labkitmacro_resize_reannot_lot1-4_sed.ijm
+labkit_labeling/labkitmacro_resize_reannot_lot5-10.ijm
+```
+
+Step 6 : generate annotated dataset  
+Refer to the script `generate_annotated_dataset.py`
+
+### 3. Modeling
 
 Use `openmmseg` framework to train, evaluate and predict segmentation masks for microplastic detection.
-Once annotated datasets are ready (generate annotated datasets using `src/generate_annotated_dataset.py`)
-do the following steps :
-- Use `notebook/prepare_dataset_for_openmmseg.ipynb` to prepare dataset for openmmseg
-- Train eval using `mmsegmentation`
-- viz using fiftyone (use inference to generate masks then use remote_fiftyone main script to load and evaluate with fiftyone)
+
+Our contributions to mmseg :
+- add custom transform `InvertBinaryLabels` and `RandomCropForeground`
+- add microplastic dataset `MicroPlasticDataset`
+- add inference script
+- fix image demo script
+- add configs for microplastic detection training and eval
+
+TODO create a pull request to add this project into mmseg public repo
+
+Once annotated datasets are ready (after step 6) do the following steps :
+
+Step 7.1 : export fiftyone dataset to Image format 
+Use `notebook/prepare_dataset_for_openmmseg.ipynb` to prepare dataset for openmmseg
+
+Step 7.2 : train and evaluate
+Train eval using `mmsegmentation` : to reproduce evaluations run todo
+
+Step 7.3 : visualize evaluations
+viz using fiftyone (use inference to generate masks then use remote_fiftyone main script to load and evaluate with fiftyone)
 refer to `fiftyone_evaluations.ipynb`
 
+### 4. Export
+
+Use the trained model to perform inference on unlabelled data
+Step 8 : model inference  
+Use the mmsegmentation inference script to generate segmentation masks :
+```
+mmsegmentation/tools/inference.py
+```
+
+Step 8 : export CSVs  
+Refer to the script `exporter.py`
+
+## Visualize datasets
+
+`viz_datasets.ipynb` : view raw images datasets
+`viz_datasets_composite_and_sample_data_for_annotation.ipynb` : view composite dataset   
+`viz_datasets_composite_v2.ipynb` : ... 
+
+Or directly go to remote_fiftyone project
 
 ## Reannotation
 

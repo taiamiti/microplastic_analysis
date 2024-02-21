@@ -1,0 +1,22 @@
+DATA:
+  RAW: "data/unit_test/raw/"
+  INGESTED: "data/unit_test/processed/ingest_data/"
+  COMPOSITE: "data/unit_test/processed/create_composite/"
+  TO_ANNOTATE: "data/unit_test/processed/data_to_annotate/"
+  ANNOTATED_MASKS: "data/unit_test/processed/labkitinference/"
+  ANNOTATED_DATASET: "data/unit_test/processed/generate_annotated_dataset/"
+  TRAINVAL_DATASET: "data/unit_test/processed/prepare_dataset_for_openmmseg/"
+
+MODELING_EXP: "data/unit_test/processed/work_dirs"
+
+FO_EVALUATIONS: "data/unit_test/processed/fiftyone_evaluations"
+
+EXPORT: "data/unit_test/processed/exporter"
+
+CREATE_TASKS:
+  n_clusters: 15
+
+LOCAL_EMBEDDING_CENTER:
+  name: "embedding_centers_lot2"
+  local_path: "data/processed/compute_embedding_filter_centers/embedding_centers_lot2.json"
+
