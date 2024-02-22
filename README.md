@@ -134,25 +134,29 @@ are handled. Refer to the data naming convention section here.
 - filter valid acquisitions : keep only zoom = 500 200 with image size = 1920x1200
 
 ```bash
+# add current dir to pythonpath
+export PYTHONPATH=$PWD
 # to process specific data set
-python src/data_prep/pipeline.py ingest_data configs/default_config.yaml lot1-20-04-2023-benitiers
+python src/data_prep/pipeline.py ingest_data_subset configs/default_config.yaml lot1-20-04-2023-benitiers
 
 # to process all the data in default_config.DATA.RAW
-python src/data_prep/pipeline.py ingest_data configs/default_config.yaml all
+python src/data_prep/pipeline.py ingest_data configs/default_config.yaml
 ```
 
 Step 3 : create and export composite dataset using `create_composite.py`  
 
 ```bash
+# add current dir to pythonpath
+export PYTHONPATH=$PWD
 # to process specific data set
-python src/data_prep/pipeline.py create_composite configs/default_config.yaml lot1-20-04-2023-benitiers
+python src/data_prep/pipeline.py create_composite_subset configs/default_config.yaml lot1-20-04-2023-benitiers
 
 # to process all the data in default_config.DATA.RAW
-python src/data_prep/pipeline.py create_composite configs/default_config.yaml all
+python src/data_prep/pipeline.py create_composite configs/default_config.yaml
 ```
 
 
-### 2. labkit_labeling
+### 2. labkit_labeling (contains manual steps)
 
 Step 4 : create annotation tasks (manual - varies with datasets lots)  
 At first, we used all the data and made clusters to facilitate labkit annotations 

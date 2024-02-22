@@ -1,14 +1,12 @@
 import tempfile
 
+import fire
 import open_clip
 
 from PIL import ImageFile
-from clearml import Task
-from omegaconf import OmegaConf
 from tqdm import tqdm
 
-from src import global_config
-from src.embeddings import compute_image_embeddings
+from src.data_prep.embeddings import compute_image_embeddings
 import fiftyone as fo
 import os
 from pathlib import Path
@@ -135,57 +133,6 @@ def create_composite_dataset(dataset: fo.Dataset, model, preprocess, tmpdirname)
     return comp_dataset
 
 
-# def main():
-#     input_dirs = [
-#         "data/processed/create_dataset/create_dataset_lot1_Benitiers/",
-#         "data/processed/create_dataset/create_dataset_lot1_Sediments/",
-#         # "data/processed/create_dataset/create_dataset_lot2_TAK_NaCl/",
-#         "data/processed/create_dataset/create_dataset_lot2_TAK_NaI/"
-#     ]
-#
-#     export_dirs = [
-#         "data/processed/create_composite/create_dataset_lot1_Benitiers",
-#         "data/processed/create_composite/create_dataset_lot1_Sediments",
-#         # "data/processed/create_composite/create_dataset_lot2_TAK_NaCl",
-#         "data/processed/create_composite/create_dataset_lot2_TAK_NaI",
-#     ]
-#
-#     for input_dir, export_dir in zip(input_dirs, export_dirs):
-#         dataset = fo.Dataset.from_dir(
-#             dataset_type=fo.types.FiftyOneDataset,
-#             dataset_dir=input_dir,
-#             labels_path=None,
-#         )
-#         dataset.info["dataset_dir"] = input_dir
-#         if not dataset.get_field("new_filter"):
-#             dataset.clone_sample_field("filter", "new_filter")
-#         dataset.save()
-#         create_and_export_comp_dataset(dataset, export_dir)
-
-
-# def main_debug():
-#     task = Task.init(project_name=global_config.CLEARML_PROJECT, task_name=os.path.basename(__file__))
-#     config_path = "./configs/config_unit_test.yaml"
-#     task.connect_configuration(
-#         name="config_unit_test",
-#         configuration=config_path
-#     )
-#     config = OmegaConf.load(config_path)
-#     input_dataset = config.DATA.INGESTED.local_path  # "data/unit_test/processed/ingest_data/lot2"
-#     output_dataset = config.DATA.COMPOSITE.local_path  # "data/unit_test/processed/create_composite/lot2"
-#     create_and_export_comp_dataset(input_dataset, output_dataset)
-#
-#     # todo add code for upload as a clearml dataset
-
-
 if __name__ == "__main__":
-    task = Task.init(project_name=global_config.CLEARML_PROJECT, task_name=os.path.basename(__file__))
-    config_path = "./configs/config_unit_test.yaml"
-    task.connect_configuration(
-        name="config_unit_test",
-        configuration=config_path
-    )
-    config = OmegaConf.load(config_path)
-    input_dataset = config.DATA.INGESTED.local_path  # "data/unit_test/processed/ingest_data/lot2"
-    output_dataset = config.DATA.COMPOSITE.local_path  # "data/unit_test/processed/create_composite/lot2"
-    create_and_export_comp_dataset(input_dataset, output_dataset)
+    fire.Fire(create_and_export_comp_dataset)
+
