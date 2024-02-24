@@ -222,6 +222,13 @@ python src/data_prep/pipeline.py matching_old_names_with_new lot1_lot4_review_se
 Step 6 : generate annotated dataset  
 
 Refer to the script `generate_annotated_dataset.py`
+```bash
+export PYTHONPATH=$PWD
+# to reproduce on subset
+python src/data_prep/pipeline.py generate_annotated_subset configs/default_config.yaml lot1-20-04-2023-benitiers
+# to reproduce on all datasets
+python src/data_prep/pipeline.py generate_annotated_dataset configs/default_config.yaml
+```
 
 ### 3. Modeling
 
