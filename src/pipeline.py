@@ -10,6 +10,7 @@ from src.labkit_labeling.create_tasks import create_tasks_lot5_10, create_tasks_
     create_tasks_lot1_3, create_tasks_with_sampling
 from src.labkit_labeling.matching_old_names_with_new import main_lot3, main_lot5_10, main_reannot_lot1_4_beni, \
     main_reannot_lot1_4_sed, main_lot4
+from src.labkit_labeling.generate_annotated_dataset import main as generate_annotated_dataset
 
 
 class Pipeline(object):
@@ -82,8 +83,20 @@ class Pipeline(object):
         else:
             ValueError("Wrong scenario")
 
-    def generate_annotated_dataset(self):
-        pass
+    def generate_annotated_dataset(self, config_path):
+        config = OmegaConf.load(config_path)
+        logger.info(f"Config : {config}")
+        for data_subset in os.listdir(config.DATA.COMPOSITE):
+            self.generate_annotated_subset(config_path, data_subset)
+
+    def generate_annotated_subset(self, config_path, data_subset):
+        config = OmegaConf.load(config_path)
+        logger.info(f"Config : {config}")
+        ds_path = os.path.join(str(config.DATA.COMPOSITE), data_subset)
+        mask_path = os.path.join(str(config.DATA.ANNOTATED_MASKS), data_subset)
+        dataset_export_path = os.path.join(str(config.DATA.ANNOTATED_DATASET), data_subset)
+        logger.info(f"generate_annotated_dataset for {data_subset}")
+        generate_annotated_dataset(ds_path, mask_path, dataset_export_path)
 
 
 if __name__ == '__main__':

@@ -222,10 +222,18 @@ python src/data_prep/pipeline.py matching_old_names_with_new lot1_lot4_review_se
 Step 6 : generate annotated dataset  
 
 Refer to the script `generate_annotated_dataset.py`
+```bash
+export PYTHONPATH=$PWD
+# to reproduce on subset
+python src/data_prep/pipeline.py generate_annotated_subset configs/default_config.yaml lot1-20-04-2023-benitiers
+# to reproduce on all datasets
+python src/data_prep/pipeline.py generate_annotated_dataset configs/default_config.yaml
+```
 
 ### 3. Modeling
 
 Use `openmmseg` framework to train, evaluate and predict segmentation masks for microplastic detection.
+Follow their installation instruction to create a conda environment.
 
 Our contributions to mmseg :
 - add custom transform `InvertBinaryLabels` and `RandomCropForeground`
@@ -238,26 +246,27 @@ TODO create a pull request to add this project into mmseg public repo
 
 Once annotated datasets are ready (after step 6) do the following steps :
 
-Step 7.1 : export fiftyone dataset to Image format 
+Step 7.1 : export fiftyone dataset to Image format  
 Use `notebook/prepare_dataset_for_openmmseg.ipynb` to prepare dataset for openmmseg
 
-Step 7.2 : train and evaluate
+Step 7.2 : train and evaluate  
 Train eval using `mmsegmentation` : to reproduce evaluations run todo
 
-Step 7.3 : visualize evaluations
+Step 7.3 : visualize evaluations  
 viz using fiftyone (use inference to generate masks then use remote_fiftyone main script to load and evaluate with fiftyone)
 refer to `fiftyone_evaluations.ipynb`
 
 ### 4. Export
 
 Use the trained model to perform inference on unlabelled data
+
 Step 8 : model inference  
 Use the mmsegmentation inference script to generate segmentation masks :
 ```
 mmsegmentation/tools/inference.py
 ```
 
-Step 8 : export CSVs  
+Step 9 : export CSVs  
 Refer to the script `exporter.py`
 
 ## Visualize datasets
