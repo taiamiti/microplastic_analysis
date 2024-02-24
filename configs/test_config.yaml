@@ -14,7 +14,12 @@ FO_EVALUATIONS: "data/unit_test/processed/fiftyone_evaluations"
 EXPORT: "data/unit_test/processed/exporter"
 
 CREATE_TASKS:
-  n_clusters: 15
+  lot: "lot1"
+  sampling_type: "origin"
+  sampling_rate: 0.7
+  n_clusters: 2
+  max_samples: -1
+  save_plot: True
 
 LOCAL_EMBEDDING_CENTER:
   name: "embedding_centers_lot2"

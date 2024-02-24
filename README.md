@@ -158,24 +158,69 @@ python src/data_prep/pipeline.py create_composite configs/default_config.yaml
 
 ### 2. labkit_labeling (contains manual steps)
 
+To label data, we grouped images into annotation tasks to limit the variability within group to be able to learn
+a simple pixel classifier model efficiently using labkit interactive learning. Also, we limit the number of samples 
+within groups to avoid labkit memory limitation when dealing with large image sets. Because grouping images into 
+annotation tasks change the image folder structure, we need to also get back the original folder structure once masks
+are computed to pair masks with images from fiftyone dataset which contains all the metadata. 
+
 Step 4 : create annotation tasks (manual - varies with datasets lots)  
 At first, we used all the data and made clusters to facilitate labkit annotations 
 using coherent batches so that one Labkit model is able to deal with the whole batch
 
-Refer to `create_tasks_lotx.ipynb`.  
-Refer to `viz_datasets_composite_v2.ipynb` for lot 4.  
+For lot4, we smple the data based on its origin (sample_type + island + station + replicas). 
+Refer to `viz_datasets_composite_v2.ipynb` or simply use the following commands to reproduce the annotation tasks :
+
 To sample data from lot 5 to 10, refer to `viz_datasets_composite_and_sample_data_for_annotation.ipynb`
-We cluster the data into 15 clusters and take 20 samples from each cluster.
+We cluster the data into 30 clusters then sample 25% and take 20 samples maximum from each cluster.
+
+```bash
+# add current dir to pythonpath
+export PYTHONPATH=$PWD
+# to reproduce lot1 to lot 3 annotation task creation
+python src/data_prep/pipeline.py create_tasks configs/default_config.yaml lot1_3
+# to reproduce lot4 annotation task creation
+python src/data_prep/pipeline.py create_tasks configs/default_config.yaml lot4
+# to reproduce lot5 to lot 10 annotation task creation
+python src/data_prep/pipeline.py create_tasks configs/default_config.yaml lot5_10
+
+# to create tasks with new lot, edit default_config CREATE_TASKS section
+python src/data_prep/pipeline.py create_tasks configs/default_config.yaml new_lot
+```
 
 Step 5 : labkit annotation + labkit inference  
-Use a model per image folder (clusters). Follow the imageJ macro scripts to generate segmentation masks :
+
+Follow this tutorial : https://docs.google.com/presentation/d/12bUywRMCjIyrB3BmrCNps7Y_XApCsKtEKgkffKQYOjs/edit#slide=id.p
+
+A model is saved for each annotation task with the same name as the task folder name under `data/processed/labkit_models`
+
+It is then possible to perform inference using labkit script to obtain the masks for the whole folder. 
+Follow the imageJ macro scripts to generate segmentation masks under `data/processed/annotated_data` :
 ```
-labkit_labeling/labkitmacro_resize_reannot_lot1-4_beni.ijm
-labkit_labeling/labkitmacro_resize_reannot_lot1-4_sed.ijm
-labkit_labeling/labkitmacro_resize_reannot_lot5-10.ijm
+src/labkit_labeling/labkitmacro_resize_lot3.ijm
+src/labkit_labeling/labkitmacro_resize_lot4.ijm
+src/labkit_labeling/labkitmacro_resize_lot5_10.ijm
+src/labkit_labeling/labkitmacro_resize_lot1_lot4_review_beni.ijm
+src/labkit_labeling/labkitmacro_resize_lot1_lot4_review_sed.ijm
+```
+*Note : Unfortunately, we cannot reproduce the first annotation of lot1 and lot2 with labkit.  
+We only saved the final masks for lot1 and lot2 in `labkitinference` folder.
+Those are refined using re-annotation (cf section )*  
+
+Then, reorganize masks into the original data structure to pair image and mask correctly using the script below.
+```bash
+# add current dir to pythonpath
+export PYTHONPATH=$PWD
+
+python src/data_prep/pipeline.py matching_old_names_with_new lot3
+python src/data_prep/pipeline.py matching_old_names_with_new lot4
+python src/data_prep/pipeline.py matching_old_names_with_new lot5_10
+python src/data_prep/pipeline.py matching_old_names_with_new lot1_lot4_review_beni
+python src/data_prep/pipeline.py matching_old_names_with_new lot1_lot4_review_sed
 ```
 
 Step 6 : generate annotated dataset  
+
 Refer to the script `generate_annotated_dataset.py`
 
 ### 3. Modeling

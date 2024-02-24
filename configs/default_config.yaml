@@ -14,7 +14,12 @@ FO_EVALUATIONS: "data/processed/fiftyone_evaluations"
 EXPORT: "data/processed/exporter"
 
 CREATE_TASKS:
+  lot: "lot11-20-11-2023-eau"
+  sampling_type: "group"
+  sampling_rate: 0.25
   n_clusters: 15
+  max_samples: 20
+  save_plot: True
 
 LOCAL_EMBEDDING_CENTER:
   name: "embedding_centers_lot2"
