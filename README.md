@@ -137,10 +137,10 @@ are handled. Refer to the data naming convention section here.
 # add current dir to pythonpath
 export PYTHONPATH=$PWD
 # to process specific data set
-python src/data_prep/pipeline.py ingest_data_subset configs/default_config.yaml lot1-20-04-2023-benitiers
+python src/pipeline.py ingest_data_subset configs/default_config.yaml lot1-20-04-2023-benitiers
 
 # to process all the data in default_config.DATA.RAW
-python src/data_prep/pipeline.py ingest_data configs/default_config.yaml
+python src/pipeline.py ingest_data configs/default_config.yaml
 ```
 
 Step 3 : create and export composite dataset using `create_composite.py`  
@@ -149,10 +149,10 @@ Step 3 : create and export composite dataset using `create_composite.py`
 # add current dir to pythonpath
 export PYTHONPATH=$PWD
 # to process specific data set
-python src/data_prep/pipeline.py create_composite_subset configs/default_config.yaml lot1-20-04-2023-benitiers
+python src/pipeline.py create_composite_subset configs/default_config.yaml lot1-20-04-2023-benitiers
 
 # to process all the data in default_config.DATA.RAW
-python src/data_prep/pipeline.py create_composite configs/default_config.yaml
+python src/pipeline.py create_composite configs/default_config.yaml
 ```
 
 
@@ -178,14 +178,14 @@ We cluster the data into 30 clusters then sample 25% and take 20 samples maximum
 # add current dir to pythonpath
 export PYTHONPATH=$PWD
 # to reproduce lot1 to lot 3 annotation task creation
-python src/data_prep/pipeline.py create_tasks configs/default_config.yaml lot1_3
+python src/pipeline.py create_tasks configs/default_config.yaml lot1_3
 # to reproduce lot4 annotation task creation
-python src/data_prep/pipeline.py create_tasks configs/default_config.yaml lot4
+python src/pipeline.py create_tasks configs/default_config.yaml lot4
 # to reproduce lot5 to lot 10 annotation task creation
-python src/data_prep/pipeline.py create_tasks configs/default_config.yaml lot5_10
+python src/pipeline.py create_tasks configs/default_config.yaml lot5_10
 
 # to create tasks with new lot, edit default_config CREATE_TASKS section
-python src/data_prep/pipeline.py create_tasks configs/default_config.yaml new_lot
+python src/pipeline.py create_tasks configs/default_config.yaml new_lot
 ```
 
 Step 5 : labkit annotation + labkit inference  
@@ -212,11 +212,11 @@ Then, reorganize masks into the original data structure to pair image and mask c
 # add current dir to pythonpath
 export PYTHONPATH=$PWD
 
-python src/data_prep/pipeline.py matching_old_names_with_new lot3
-python src/data_prep/pipeline.py matching_old_names_with_new lot4
-python src/data_prep/pipeline.py matching_old_names_with_new lot5_10
-python src/data_prep/pipeline.py matching_old_names_with_new lot1_lot4_review_beni
-python src/data_prep/pipeline.py matching_old_names_with_new lot1_lot4_review_sed
+python src/pipeline.py matching_old_names_with_new lot3
+python src/pipeline.py matching_old_names_with_new lot4
+python src/pipeline.py matching_old_names_with_new lot5_10
+python src/pipeline.py matching_old_names_with_new lot1_lot4_review_beni
+python src/pipeline.py matching_old_names_with_new lot1_lot4_review_sed
 ```
 
 Step 6 : generate annotated dataset  
@@ -225,9 +225,9 @@ Refer to the script `generate_annotated_dataset.py`
 ```bash
 export PYTHONPATH=$PWD
 # to reproduce on subset
-python src/data_prep/pipeline.py generate_annotated_subset configs/default_config.yaml lot1-20-04-2023-benitiers
+python src/pipeline.py generate_annotated_subset configs/default_config.yaml lot1-20-04-2023-benitiers
 # to reproduce on all datasets
-python src/data_prep/pipeline.py generate_annotated_dataset configs/default_config.yaml
+python src/pipeline.py generate_annotated_dataset configs/default_config.yaml
 ```
 
 ### 3. Modeling
