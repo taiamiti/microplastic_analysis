@@ -107,7 +107,18 @@ def sample_dataset_by_group(dataset, sampling_rate=0.25):
     if sampling_rate == 1:
         return dataset
     sample_ids = dataset.values('id')
-    groups = dataset.values(CLUSTER_FIELD_NAME)
+    groups = np.array(dataset.values(CLUSTER_FIELD_NAME))
+    group_ids, counts = np.unique(groups, return_counts=True)
+    singleton_groups = []
+    valid_groups = []
+    # handle edge case where singleton groups exist due to outlier which is not possible to split afterwards
+    for group_id, count in zip(group_ids, counts):
+        if count < 2:
+            singleton_groups.append(group_id)
+        else:
+            valid_groups.append(group_id)
+    for singleton_group in singleton_groups:
+        groups[groups == singleton_group] = valid_groups[0]  # assign singleton groups to first valid group
     sid_train, sid_test, ori_train, ori_test = train_test_split(sample_ids,
                                                                 groups,
                                                                 stratify=groups,
@@ -135,7 +146,7 @@ def create_tasks_subset(input_dir, output_dir, n_clusters, max_samples, save_plo
 def create_tasks_with_sampling(input_dir, lots, output_dir, sampling_type,
                                sampling_rate=0.25, n_clusters=15, max_samples=20, save_plot=True):
     # Merge to single dataset
-    dataset = fo.Dataset("merged_datasets")
+    dataset = fo.Dataset()
     for lot in lots:
         dataset.add_dir(
             dataset_dir=os.path.join(input_dir, lot),
@@ -151,6 +162,7 @@ def create_tasks_with_sampling(input_dir, lots, output_dir, sampling_type,
     else:
         raise ValueError("sampling type is invalid")
     if save_plot:
+        os.makedirs(output_dir, exist_ok=True)
         scatterplot_fig, histo_fig = visualize_clusters(dataset)
         scatterplot_fig.write_html(os.path.join(output_dir, "scatterplot_fig.html"))
         histo_fig.write_html(os.path.join(output_dir, "histo_fig.html"))
