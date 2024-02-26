@@ -1,6 +1,9 @@
 # folders
 cache/
 data
+mmsegmentation/work_dirs
+mmsegmentation/viz
+work_dirs
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
