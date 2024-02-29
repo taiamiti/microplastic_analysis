@@ -236,11 +236,15 @@ python src/pipeline.py generate_annotated_dataset configs/default_config.yaml
 Samples are tagged as train, test or unlabelled. 30% of data is used and data is split by origins.
 
 Step 7 : export fiftyone dataset to Image Sequence format and save train/test protocols
+
+Protocols are defined as follows :
+
+
 ```bash
 export PYTHONPATH=$PWD
 
 # to convert to image sequence dataset format for all datasets
-python src/pipeline.py generate_annotated_dataset configs/default_config.yaml
+python src/pipeline.py prepare_dataset_for_openmmseg configs/default_config.yaml
 ```
 
 ### 3. Modeling
@@ -251,36 +255,64 @@ Follow their installation instruction to create a conda environment.
 Our contributions to mmseg :
 - add custom transform `InvertBinaryLabels` and `RandomCropForeground`
 - add microplastic dataset `MicroPlasticDataset`
-- add inference script
+- add inference script `tools/inference.py`
 - fix image demo script
 - add configs for microplastic detection training and eval
 
 TODO create a pull request to add this project into mmseg public repo
 
-Once annotated datasets are ready (after step 6) do the following steps :
+Step 8.1 : train and evaluate  
 
+Train and eval using `mmsegmentation` 
+```bash
+export PYTHONPATH=mmsegmentation:$PWD
+conda activate openmmlab
 
+# to reproduce exp with sed_inta_inter_ile protocol with 256*256 input size
+python mmsegmentation/tools/train.py \
+mmsegmentation/projects/microplastic_detection/configs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-256x256_sed_intra_inter_ile.py \
+--work-dir data/modeling/work_dirs
 
+# to reproduce exp with train_test protocol with 256*256 input size
+python mmsegmentation/tools/train.py \
+mmsegmentation/projects/microplastic_detection/configs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-256x256_train_test.py \
+--work-dir data/modeling/work_dirs
 
-Step 7.2 : train and evaluate  
-Train eval using `mmsegmentation` : to reproduce evaluations run todo
+# to reproduce exp with train_test protocol with 400*400 input size
+python mmsegmentation/tools/train.py \
+mmsegmentation/projects/microplastic_detection/configs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-400x400_train_test.py \
+--work-dir data/modeling/work_dirs
+```
 
-Step 7.3 : inference to use as input for fiftyone eval
-todo
+Step 8.2 : inference to use as input for fiftyone eval
 
-Step 7.3 : visualize evaluations  
+```bash
+conda activate openmmlab
+
+# example of using model for inference on unlabelled data
+python mmsegmentation/tools/inference.py \
+--model_config mmsegmentation/projects/microplastic_detection/configs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-400x400_train_test.py \
+--model_ckpts work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-400x400_train_test/best_mIoU_iter_2800.pth \
+--img_folder data/processed/create_composite/lot11-20-11-2023-eau/data \
+--save_folder work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-400x400_train_test/inference/lot11-20-11-2023-eau
+```
+
+Step 8.3 : visualize evaluations  
 viz using fiftyone (use inference to generate masks then use remote_fiftyone main script to load and evaluate with fiftyone)
 refer to `fiftyone_evaluations.ipynb`
+```bash
+conda activate map_de
+
+# example of using model for inference on unlabelled data
+python src/modeling/run_fiftyone_eval.py \
+data/processed/generate_annotated_dataset \
+data/processed/work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-256x256_train_test/inference \
+--eval_bool True
+```
 
 ### 4. Export
 
 Use the trained model to perform inference on unlabelled data
-
-Step 8 : model inference  
-Use the mmsegmentation inference script to generate segmentation masks :
-```
-mmsegmentation/tools/inference.py
-```
 
 Step 9 : export CSVs  
 Refer to the script `exporter.py`
