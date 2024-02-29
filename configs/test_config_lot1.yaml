@@ -3,6 +3,7 @@ DATA:
   INGESTED: "data/test_config_lot1/ingest_data/"
   COMPOSITE: "data/test_config_lot1/create_composite/"
   TO_ANNOTATE: "data/test_config_lot1/data_to_annotate/"
+  ANNOTATED_TMP: "data/test_config_lot1/annotated_data/"
   ANNOTATED_MASKS: "data/test_config_lot1/labkitinference/"
   ANNOTATED_DATASET: "data/test_config_lot1/generate_annotated_dataset/"
   TRAINVAL_DATASET: "data/test_config_lot1/prepare_dataset_for_openmmseg/"
@@ -14,9 +15,8 @@ FO_EVALUATIONS: "data/test_config_lot1/fiftyone_evaluations"
 EXPORT: "data/test_config_lot1/exporter"
 
 CREATE_TASKS:
-  lot: "lot1-20-04-2023-benitiers"
   sampling_type: "group"
-  sampling_rate: 0.25
+  sampling_rate: 0.8
   n_clusters: 10
   max_samples: 20
   save_plot: True

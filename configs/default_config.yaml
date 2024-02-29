@@ -3,6 +3,7 @@ DATA:
   INGESTED: "data/processed/ingest_data/"
   COMPOSITE: "data/processed/create_composite/"
   TO_ANNOTATE: "data/processed/data_to_annotate/"
+  ANNOTATED_TMP: "data/processed/annotated_data/"
   ANNOTATED_MASKS: "data/processed/labkitinference/"
   ANNOTATED_DATASET: "data/processed/generate_annotated_dataset/"
   TRAINVAL_DATASET: "data/processed/prepare_dataset_for_openmmseg/"
@@ -14,10 +15,53 @@ FO_EVALUATIONS: "data/processed/fiftyone_evaluations"
 EXPORT: "data/processed/exporter"
 
 CREATE_TASKS:
-  lot: "lot11-20-11-2023-eau"
   sampling_type: "group"
   sampling_rate: 0.25
   n_clusters: 15
+  max_samples: 20
+  save_plot: True
+
+CREATE_TASKS_LOT1_3:
+  lots: [
+    "lot1-20-04-2023-benitiers",
+    "lot1-20-04-2023-sediments",
+    "lot2-30-05-2023-tak_nacl",
+    "lot2-30-05-2023-tak_nai",
+    "lot3-08-06-2023-benitiers"
+  ]
+  sampling_type: "group"
+  sampling_rate: 0.25
+  n_clusters: 15
+  max_samples: 20
+  save_plot: True
+
+CREATE_TASKS_LOT4:
+  lots: [
+    "lot4-28-06-2023-sediments-part1",
+    "lot4-28-06-2023-sediments-part2",
+    "lot4-28-06-2023-sediments-part3",
+  ]
+  sampling_type: "origin"
+  sampling_rate: 0.25
+  n_clusters: 15
+  max_samples: -1
+  save_plot: True
+
+CREATE_TASKS_LOT5_10:
+  lots: [
+    "lot2-30-05-2023-tak_nai-part2",
+    "lot5-04-07-2023-benitiers-part1",
+    "lot5-04-07-2023-benitiers-part2",
+    "lot6-12-08-2023-eau-vertical",
+    "lot6-12-08-2023-eau-horizontal",
+    "lot7-28-09-2023-benitiers",
+    "lot8-28-09-2023-benitiers",
+    "lot9-09-10-2023-benitiers",
+    "lot10-09-10-2023-benitiers"
+  ]
+  sampling_type: "group"
+  sampling_rate: 0.25
+  n_clusters: 30
   max_samples: 20
   save_plot: True
 

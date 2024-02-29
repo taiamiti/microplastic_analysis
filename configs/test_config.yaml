@@ -3,6 +3,7 @@ DATA:
   INGESTED: "data/unit_test/processed/ingest_data/"
   COMPOSITE: "data/unit_test/processed/create_composite/"
   TO_ANNOTATE: "data/unit_test/processed/data_to_annotate/"
+  ANNOTATED_TMP: "data/unit_test/annotated_data/"
   ANNOTATED_MASKS: "data/unit_test/processed/labkitinference/"
   ANNOTATED_DATASET: "data/unit_test/processed/generate_annotated_dataset/"
   TRAINVAL_DATASET: "data/unit_test/processed/prepare_dataset_for_openmmseg/"
@@ -14,7 +15,6 @@ FO_EVALUATIONS: "data/unit_test/processed/fiftyone_evaluations"
 EXPORT: "data/unit_test/processed/exporter"
 
 CREATE_TASKS:
-  lot: "lot1"
   sampling_type: "origin"
   sampling_rate: 0.7
   n_clusters: 2

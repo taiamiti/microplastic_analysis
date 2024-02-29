@@ -184,7 +184,7 @@ python src/pipeline.py create_tasks configs/default_config.yaml lot4
 # to reproduce lot5 to lot 10 annotation task creation
 python src/pipeline.py create_tasks configs/default_config.yaml lot5_10
 
-# to create tasks with new lot, edit default_config CREATE_TASKS section
+# to create tasks with subset called new_lot, edit default_config CREATE_TASKS section for create_tasks params
 python src/pipeline.py create_tasks configs/default_config.yaml new_lot
 ```
 
@@ -212,11 +212,14 @@ Then, reorganize masks into the original data structure to pair image and mask c
 # add current dir to pythonpath
 export PYTHONPATH=$PWD
 
-python src/pipeline.py matching_old_names_with_new lot3
-python src/pipeline.py matching_old_names_with_new lot4
-python src/pipeline.py matching_old_names_with_new lot5_10
-python src/pipeline.py matching_old_names_with_new lot1_lot4_review_beni
-python src/pipeline.py matching_old_names_with_new lot1_lot4_review_sed
+python src/pipeline.py matching_old_names_with_new configs/default_config.yaml lot3
+python src/pipeline.py matching_old_names_with_new configs/default_config.yaml lot4
+python src/pipeline.py matching_old_names_with_new configs/default_config.yaml lot5_10
+python src/pipeline.py matching_old_names_with_new configs/default_config.yaml lot1_lot4_review_beni
+python src/pipeline.py matching_old_names_with_new configs/default_config.yaml lot1_lot4_review_sed
+
+# for new lot named new_lot
+python src/pipeline.py matching_old_names_with_new configs/default_config.yaml new_lot
 ```
 
 Step 6 : generate annotated dataset  
@@ -227,6 +230,16 @@ export PYTHONPATH=$PWD
 # to reproduce on subset
 python src/pipeline.py generate_annotated_subset configs/default_config.yaml lot1-20-04-2023-benitiers
 # to reproduce on all datasets
+python src/pipeline.py generate_annotated_dataset configs/default_config.yaml
+```
+
+Samples are tagged as train, test or unlabelled. 30% of data is used and data is split by origins.
+
+Step 7 : export fiftyone dataset to Image Sequence format and save train/test protocols
+```bash
+export PYTHONPATH=$PWD
+
+# to convert to image sequence dataset format for all datasets
 python src/pipeline.py generate_annotated_dataset configs/default_config.yaml
 ```
 
@@ -246,11 +259,14 @@ TODO create a pull request to add this project into mmseg public repo
 
 Once annotated datasets are ready (after step 6) do the following steps :
 
-Step 7.1 : export fiftyone dataset to Image format  
-Use `notebook/prepare_dataset_for_openmmseg.ipynb` to prepare dataset for openmmseg
+
+
 
 Step 7.2 : train and evaluate  
 Train eval using `mmsegmentation` : to reproduce evaluations run todo
+
+Step 7.3 : inference to use as input for fiftyone eval
+todo
 
 Step 7.3 : visualize evaluations  
 viz using fiftyone (use inference to generate masks then use remote_fiftyone main script to load and evaluate with fiftyone)
