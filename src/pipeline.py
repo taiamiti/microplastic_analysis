@@ -12,6 +12,9 @@ from src.labkit_labeling.matching_old_names_with_new import main_lot3, main_lot5
 from src.labkit_labeling.generate_annotated_dataset import main as generate_annotated_dataset
 from src.labkit_labeling.prepare_dataset_for_openmmseg import main as prepare_dataset_for_openmmseg
 
+from src.export.exporter import main_export_unlabelled_folder as export_unlabelled_folder
+from src.export.exporter import main_export as export
+
 
 class Pipeline(object):
 
@@ -128,6 +131,21 @@ class Pipeline(object):
         ds_path = str(config.DATA.ANNOTATED_DATASET)
         save_dir = str(config.DATA.TRAINVAL_DATASET)
         prepare_dataset_for_openmmseg(ds_path, save_dir)
+
+    def export_unlabelled_folder(self, config_path, img_dir, labels_dir):
+        config = OmegaConf.load(config_path)
+        logger.info(f"Config : {config}")
+        # img_dir = "data/processed/create_composite/lot11-20-11-2023-eau",
+        # labels_dir = "work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-400x400_train_test/pred_unlabelled",
+        export_dir = config.EXPORT
+        export_unlabelled_folder(img_dir, labels_dir, export_dir)
+
+    def export(self, config_path, labels_root_dir):
+        config = OmegaConf.load(config_path)
+        logger.info(f"Config : {config}")
+        data_root_dir = config.DATA.ANNOTATED_DATASET
+        export_dir = config.EXPORT
+        export(data_root_dir, labels_root_dir, export_dir)
 
 
 if __name__ == '__main__':

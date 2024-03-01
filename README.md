@@ -310,12 +310,23 @@ data/processed/work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_dete
 --eval_bool True
 ```
 
-### 4. Export
+### 4. Export CSVs
 
-Use the trained model to perform inference on unlabelled data
+Use the trained model to perform inference on unlabelled data. Exports use labkit gt annotations when labels are 
+available. Otherwise, it uses model predictions (inference). Segmentation masks are supercharged with 
+instance level segmentation with shape descriptors and confidence score for each detection.
 
-Step 9 : export CSVs  
-Refer to the script `exporter.py`
+```bash
+conda activate map_de
+
+# export annotated dataset
+python src/pipeline.py export configs/default_config.yaml data/processed/work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-256x256_train_test/inference
+
+# export unlabelled folder (ex with lot11-20-11-2023-eau)
+python src/pipeline.py export_unlabelled_folder configs/default_config.yaml \
+data/processed/create_composite/lot11-20-11-2023-eau \
+data/processed/work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-256x256_train_test/inference/lot11-20-11-2023-eau
+```
 
 ## Visualize datasets
 
