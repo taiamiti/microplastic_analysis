@@ -181,6 +181,7 @@ annotation tasks change the image folder structure, we need to also get back the
 are computed to pair masks with images from fiftyone dataset which contains all the metadata. 
 
 #### Step 4 : create annotation tasks (manual - varies with datasets lots)  
+
 At first, we used all the data and made clusters to facilitate labkit annotations 
 using coherent batches so that one Labkit model is able to deal with the whole batch
 
@@ -369,9 +370,9 @@ When both masks (labkit and predictions) are available, exports use the labkit g
 
 ## Visualize datasets
 
-`viz_datasets.ipynb` : view raw images datasets
-`viz_datasets_composite_and_sample_data_for_annotation.ipynb` : view composite dataset   
-`viz_datasets_composite_v2.ipynb` : ... 
+Use the following notebooks :
+- `src/viz/viz_lot5_10_and_sample_data_for_annotation.ipynb` 
+- `src/viz/viz_lot1_4_datasets_composite_v2.ipynb` 
 
 Or directly go to remote_fiftyone project
 
@@ -384,9 +385,10 @@ Here is the procedure to complete the correction :
 - Use fiftyone to visualize gt masks and tag samples that need re-annotation  
 - Use notebook `load_lot1_lot4_tags_for_reannotation.ipynb` to create reannotation tasks for beni and sed  
 - Get annotations and copy them to `/home/taiamiti/Projects/micro-plastic/cmdinferencelabkit/`  
-- Perform inference using labkit model with `labkitmacro_resize_reannot_lot1-4_beni.ijm` and `labkitmacro_resize_reannot_lot1-4_sed.ijm`  
-- Copy masks to `data/processed/labelkitinference` using `src/matching_old_names_with_new.py`
-- Generate annotated datasets using `src/generate_annotated_dataset.py`
+- Perform inference using labkit model with `labkitmacro_resize_lot1_lot4_review_beni.ijm` and 
+`labkitmacro_resize_lot1_lot4_review_sed.ijm`
+- Copy masks to `data/processed/labelkitinference` using `src/labkit_labeling/matching_old_names_with_new.py`
+- Generate annotated datasets using `src/labkit_labeling/generate_annotated_dataset.py`
 
 
 ## Detection filtering
