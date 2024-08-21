@@ -117,19 +117,35 @@ data/raw
 
 ## Pipeline
 
+### 0. Configuration
+
+Refer to `configs/default_config.yaml` to reproduce all the results. 
+This config file defines : 
+- data folders to ingest and process data
+- modelling experiments directory
+- fiftyone evaluations directory
+- csv export directory
+- parameters to run the different pipeline components
+
+For unit testting the pipeline, a specific `configs\test_config.yaml` is defined.
+
+An example is also provided to run the pipeline for `lot1` under `configs/config_lot1.yaml`
+
+
 ### 1. Data preparation
 
-Step 1 : compute embeddings centers for each filters on dataset lot2
-`compute_embeddings_filter_centers_lot2.ipynb`
-We use `lot2` instead of `lot1` because it is more challenging with some overlap 
-between TRI and NAT
+#### Step 1 : compute embeddings centers for each filters on dataset lot2
+
+Use `data_prep/compute_embeddings_filter_centers_lot2.ipynb` in order to save embeddings centers.
+We use `lot2` instead of `lot1` because it is more challenging with some overlap between TRI and NAT
 
 
-Step 2 : ingest data using script `ingest_data.py`
+#### Step 2 : ingest data 
+
 - find metadata to rename files : use OCR to read zoom and use exif to read exposition
 - filter to maintain 4 images per acquisition : this is required to infer the type of filter used as this information 
 is not always correct due to manual renaming. In order to know which images belong to the same observation, multiple cases
-are handled. Refer to the data naming convention section here.
+are handled. Refer to the data naming convention section [here](#Data-naming-convention).
 - infer color based on 4 images using embeddings centers matching
 - filter valid acquisitions : keep only zoom = 500 200 with image size = 1920x1200
 
@@ -143,7 +159,7 @@ python src/pipeline.py ingest_data_subset configs/default_config.yaml lot1-20-04
 python src/pipeline.py ingest_data configs/default_config.yaml
 ```
 
-Step 3 : create and export composite dataset using `create_composite.py`  
+#### Step 3 : create and export composite dataset
 
 ```bash
 # add current dir to pythonpath
@@ -158,18 +174,18 @@ python src/pipeline.py create_composite configs/default_config.yaml
 
 ### 2. labkit_labeling (contains manual steps)
 
-To label data, we grouped images into annotation tasks to limit the variability within group to be able to learn
-a simple pixel classifier model efficiently using labkit interactive learning. Also, we limit the number of samples 
+To label data, we grouped images into smaller annotation tasks to limit the variability within group. This allows us to 
+learn a simple pixel classifier model efficiently using labkit interactive learning. Also, we limit the number of samples 
 within groups to avoid labkit memory limitation when dealing with large image sets. Because grouping images into 
 annotation tasks change the image folder structure, we need to also get back the original folder structure once masks
 are computed to pair masks with images from fiftyone dataset which contains all the metadata. 
 
-Step 4 : create annotation tasks (manual - varies with datasets lots)  
+#### Step 4 : create annotation tasks (manual - varies with datasets lots)  
 At first, we used all the data and made clusters to facilitate labkit annotations 
 using coherent batches so that one Labkit model is able to deal with the whole batch
 
-For lot4, we smple the data based on its origin (sample_type + island + station + replicas). 
-Refer to `viz_datasets_composite_v2.ipynb` or simply use the following commands to reproduce the annotation tasks :
+For lot4, we sample the data based on its origin (sample_type + island + station + replicas). 
+Refer to `viz_datasets_composite_v2.ipynb`.
 
 To sample data from lot 5 to 10, refer to `viz_datasets_composite_and_sample_data_for_annotation.ipynb`
 We cluster the data into 30 clusters then sample 25% and take 20 samples maximum from each cluster.
@@ -188,7 +204,7 @@ python src/pipeline.py create_tasks configs/default_config.yaml lot5_10
 python src/pipeline.py create_tasks configs/default_config.yaml new_lot
 ```
 
-Step 5 : labkit annotation + labkit inference  
+#### Step 5 : labkit annotation + labkit inference  
 
 Follow this tutorial : https://docs.google.com/presentation/d/12bUywRMCjIyrB3BmrCNps7Y_XApCsKtEKgkffKQYOjs/edit#slide=id.p
 
@@ -205,7 +221,7 @@ src/labkit_labeling/labkitmacro_resize_lot1_lot4_review_sed.ijm
 ```
 *Note : Unfortunately, we cannot reproduce the first annotation of lot1 and lot2 with labkit.  
 We only saved the final masks for lot1 and lot2 in `labkitinference` folder.
-Those are refined using re-annotation (cf section )*  
+Those are refined using [re-annotation section](#reannotation)
 
 Then, reorganize masks into the original data structure to pair image and mask correctly using the script below.
 ```bash
@@ -222,7 +238,7 @@ python src/pipeline.py matching_old_names_with_new configs/default_config.yaml l
 python src/pipeline.py matching_old_names_with_new configs/default_config.yaml new_lot
 ```
 
-Step 6 : generate annotated dataset  
+#### Step 6 : generate annotated dataset  
 
 Refer to the script `generate_annotated_dataset.py`
 ```bash
@@ -235,11 +251,9 @@ python src/pipeline.py generate_annotated_dataset configs/default_config.yaml
 
 Samples are tagged as train, test or unlabelled. 30% of data is used and data is split by origins.
 
-Step 7 : export fiftyone dataset to Image Sequence format and save train/test protocols
+#### Step 7 : export fiftyone dataset to Image Sequence format and save train/test protocols
 
 Protocols are defined as follows :
-
-
 ```bash
 export PYTHONPATH=$PWD
 
@@ -261,7 +275,7 @@ Our contributions to mmseg :
 
 TODO create a pull request to add this project into mmseg public repo
 
-Step 8.1 : train and evaluate  
+#### Step 8.1 : train and evaluate  
 
 Train and eval using `mmsegmentation` 
 ```bash
@@ -284,7 +298,7 @@ mmsegmentation/projects/microplastic_detection/configs/fcn-unet-s5-d16_unet_1xb1
 --work-dir data/modeling/work_dirs
 ```
 
-Step 8.2 : inference to use as input for fiftyone eval
+#### Step 8.2 : inference to use as input for fiftyone eval
 
 ```bash
 conda activate openmmlab
@@ -297,9 +311,9 @@ python mmsegmentation/tools/inference.py \
 --save_folder work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-400x400_train_test/inference/lot11-20-11-2023-eau
 ```
 
-Step 8.3 : visualize evaluations  
-viz using fiftyone (use inference to generate masks then use remote_fiftyone main script to load and evaluate with fiftyone)
-refer to `fiftyone_evaluations.ipynb`
+#### Step 8.3 : visualize evaluations  
+
+To run evaluations and visualize results in fiftyone UI, run the following :
 ```bash
 conda activate map_de
 
@@ -310,23 +324,48 @@ data/processed/work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_dete
 --eval_bool True
 ```
 
+#### Step 8.4 (optional) : save dataset to disk
+
+```python
+import fiftyone as fo
+
+dataset = fo.load_dataset("mp_dataset")
+dataset.export(
+    export_dir="data/processed/fiftyone_evaluations/ds_export",
+    dataset_type=fo.types.FiftyOneDataset,
+)
+```
+
 ### 4. Export CSVs
 
-Use the trained model to perform inference on unlabelled data. Exports use labkit gt annotations when labels are 
-available. Otherwise, it uses model predictions (inference). Segmentation masks are supercharged with 
-instance level segmentation with shape descriptors and confidence score for each detection.
+In order to export CSV with instance segmentation results and descriptors similar to MP-VAT2.0, we need to convert 
+masks (predictions or ground truth) into instance detections or polylines. Shape descriptors and custom confidence score 
+is computed for each detection. 
 
+When someone adds a new lot of samples, make sure the following re-requisite are followed before exporting :
+- create image composite dataset as described in [section 3](#step-3--create-and-export-composite-dataset)
+- make sure mask predictions are inferred as described in [section 8.2](#Step-8.2)
+
+To export detections for a new lot in CSV format run :
+```bash
+conda activate map_de
+# export a specific unlabelled folder (ex new unlabelled lots with lot11-20-11-2023-eau)
+python src/pipeline.py export_unlabelled_folder configs/default_config.yaml \
+data/processed/create_composite/lot11-20-11-2023-eau \
+data/processed/work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-256x256_train_test/inference/lot11-20-11-2023-eau
+```
+
+To export all the lots, make sure that :
+- all lots are either annotated manually (labkit) or have predictions or both
+- then run the following command 
 ```bash
 conda activate map_de
 
 # export annotated dataset
 python src/pipeline.py export configs/default_config.yaml data/processed/work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-256x256_train_test/inference
-
-# export unlabelled folder (ex with lot11-20-11-2023-eau)
-python src/pipeline.py export_unlabelled_folder configs/default_config.yaml \
-data/processed/create_composite/lot11-20-11-2023-eau \
-data/processed/work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-256x256_train_test/inference/lot11-20-11-2023-eau
 ```
+When both masks (labkit and predictions) are available, exports use the labkit gt annotations.
+
 
 ## Visualize datasets
 
@@ -335,6 +374,8 @@ data/processed/work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_dete
 `viz_datasets_composite_v2.ipynb` : ... 
 
 Or directly go to remote_fiftyone project
+
+TODO include remote fiftyone as submodule
 
 ## Reannotation
 
