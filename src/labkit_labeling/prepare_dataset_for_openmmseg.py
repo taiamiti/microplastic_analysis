@@ -26,6 +26,7 @@ class EvalProtocol(IntEnum):
     SED_BENI_INTRA_INTER_ILE = 4
     TRAIN_TEST = 5
     UNLABELLED = 6
+    BENI_HAO_MAK_TUB = 7
 
 
 def get_data_dict(fo_dataset, subset, protocol):
@@ -52,6 +53,10 @@ def get_data_dict(fo_dataset, subset, protocol):
             dataset_view = fo_dataset.match_tags("test").match(F('sample_type').is_in(("BENI", "CBENI", "SED", "CSED")))
     elif protocol == EvalProtocol.TRAIN_TEST:
         dataset_view = fo_dataset.match_tags(subset)
+    elif protocol == EvalProtocol.BENI_HAO_MAK_TUB:
+        dataset_view = (fo_dataset.match_tags(subset)
+                        .match(F('island').is_in(('HAO', 'MAK', 'TUB')))
+                        .match(F('sample_type').is_in(("BENI", "CBENI"))))
     elif protocol == EvalProtocol.UNLABELLED:
         dataset_view = fo_dataset.match_tags("unlabelled")
         return [{"img": sample.filepath} for sample in dataset_view]

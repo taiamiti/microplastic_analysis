@@ -27,7 +27,7 @@ torchvision = { version = "==0.15.0", index = "https://download.pytorch.org/whl/
 torchmetrics = { version = "==0.10.3" }
 mmengine = "*"
 mmcv = { url = "https://download.openmmlab.com/mmcv/dist/cu117/torch2.0.0/mmcv-2.0.1-cp39-cp39-manylinux1_x86_64.whl" }
-mmsegmentation = ">=1.0.0"
+mmsegmentation = { path = "./mmsegmentation", editable = true }
 tensorboard = "*"
 pycocotools = "*"
 

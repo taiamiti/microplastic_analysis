@@ -22,14 +22,29 @@ export PYTHONPATH=$PWD
 ```
 
 ### 2. Modeling Environment (openmmlab)
-For training and inference with mmsegmentation:
+For training and inference with **customized local mmsegmentation**:
 ```bash
-# Follow installation instructions in mmsegmentation/README.md
+conda create -n openmmlab python=3.9
 conda activate openmmlab
+
+# Install PyTorch with CUDA 11.7
+pip install torch==2.0.0 torchvision==0.15.0 --index-url https://download.pytorch.org/whl/cu117
+
+# Install mmcv and mmengine
+pip install mmengine
+pip install https://download.openmmlab.com/mmcv/dist/cu117/torch2.0.0/mmcv-2.0.1-cp39-cp39-manylinux1_x86_64.whl
+
+# Install LOCAL customized mmsegmentation in editable mode
+cd mmsegmentation && pip install -e . && cd ..
+
+# Set PYTHONPATH
 export PYTHONPATH=mmsegmentation:$PWD
 ```
 
-**Important:** These environments must be kept separate due to conflicting torch dependencies between CLIP embeddings (data engineering) and mmsegmentation (modeling).
+**Important:**
+- Use the LOCAL mmsegmentation from `./mmsegmentation` directory (has custom datasets, transforms, inference script)
+- Do NOT install mmsegmentation from PyPI
+- These environments must be kept separate due to conflicting torch dependencies between CLIP embeddings (data engineering) and mmsegmentation (modeling)
 
 ## Common Commands
 

@@ -27,24 +27,32 @@ todo
 
 ## Installation
 
-There are 2 environments to run the project : one for data engineering (data_prep, labkit_labeling, export) 
-and one for modeling. This is because modeling is based on mmsegmentation framework which has an independent installation 
-procedure which is quite heavy and can conflict with torch installation in data engineering for computing clip embeddings.
-For this reason the two envs are kept separated.
+**Important:** This project uses a **customized version** of mmsegmentation located in `./mmsegmentation` with custom datasets, transforms, and inference scripts. The local version is automatically installed - do NOT install mmsegmentation from PyPI.
 
-### 1. data engineering env
+### Using Pixi (Unified Environment)
 
-Use conda to create an environment for data engineering tasks
+Pixi provides a single unified environment for all pipeline tasks (data engineering + modeling):
+
 ```bash
-conda create -n map_de python=3.9
-conda activate map_de
-pip install -r requirements_de.txt
+# Install Pixi (if not already installed)
+curl -fsSL https://pixi.sh/install.sh | bash
+
+# Install all dependencies (automatically installs local customized mmsegmentation)
+pixi install
+
+# Activate the environment
+pixi shell
+
+# Set PYTHONPATH for pipeline scripts
+export PYTHONPATH=mmsegmentation:$PWD
 ```
 
-### 2. modeling env
-
-Follow the installation instruction of mmsegmentation for the modeling environment 
-(cf [README.md](./mmsegmentation/README.md))
+This installs:
+- Python 3.9
+- PyTorch 2.0.0 with CUDA 11.7
+- mmcv 2.0.1 and mmengine
+- Local customized mmsegmentation (editable install)
+- All data engineering dependencies (CLIP, FiftyOne, etc.)
 
 ## Data naming convention
 
@@ -269,20 +277,109 @@ Use `openmmseg` framework to train, evaluate and predict segmentation masks for 
 Follow their installation instruction to create a conda environment.
 
 Our contributions to mmseg :
-- add custom transform `InvertBinaryLabels` and `RandomCropForeground`
-- add microplastic dataset `MicroPlasticDataset`
-- add inference script `tools/inference.py`
-- fix image demo script
-- add configs for microplastic detection training and eval
+
+#### Custom Dataset Class
+**File:** `mmseg/datasets/microplastic.py` (61 lines)
+- **Registered as:** `MicroPlasticDataset`
+- **Purpose:** Custom dataset that reads from text protocol files (train/test splits)
+- **Key features:**
+  - 2 classes: 'background' and 'microplastic'
+  - Reads image paths from annotation files (e.g., `train_EvalProtocol_TRAIN_TEST.txt`)
+  - Supports `.jpg` images and `.png` masks
+  - No zero-label reduction (keeps background as class 0)
+- **Registration:** Added to `mmseg/datasets/__init__.py:27` and exported in `__all__:63`
+
+#### Custom Transforms
+**File:** `mmseg/datasets/transforms/custom_transforms.py` (160 lines)
+
+**A. `InvertBinaryLabels`**
+- **Purpose:** Converts binary masks from 255→1 and applies Gaussian blur
+- **Why:** Labkit outputs masks with 255 for microplastics; this normalizes to 1 and smooths edges
+- **Registration:** Added to `mmseg/datasets/transforms/__init__.py:17` and exported in `__all__:29`
+
+**B. `RandomCropForeground`**
+- **Purpose:** Intelligent cropping that focuses on microplastic regions
+- **Algorithm:**
+  1. Randomly selects a foreground pixel (class 1)
+  2. Crops with 25-75% overlap to ensure microplastic in frame
+  3. Falls back to random crop if no foreground exists
+- **Why:** Addresses severe class imbalance (microplastics are tiny compared to background)
+- **Parameters:**
+  - `crop_size`: (400, 400) or (256, 256)
+  - `cat_max_ratio`: Controls class distribution in crop
+  - `ignore_index`: 255 (default)
+- **Note:** Imported via config's `custom_imports` directive
+
+#### Custom Inference Script
+**File:** `tools/inference.py` (73 lines)
+- **Purpose:** Run inference on unlabeled images with custom post-processing
+- **Key differences from standard mmseg:**
+  - Applies **sigmoid** to logits instead of argmax
+  - Uses **threshold=0.5** for binary segmentation
+  - Saves as binary PNG masks (0 or 255)
+  - Processes entire directories of `.jpg` images
+
+#### Project Configs
+**Directory:** `projects/microplastic_detection/configs/`
+
+**Base Configs:**
+- `microplastic_detection_256x256.py` - 256×256 crop size pipeline
+- `microplastic_detection_400x400.py` - 400×400 crop size pipeline
+
+**Key configuration:**
+```python
+dataset_type = 'MicroPlasticDataset'
+data_root = 'data/processed/prepare_dataset_for_openmmseg'
+custom_imports = dict(imports='mmseg.datasets.transforms.custom_transforms')
+
+train_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(type='LoadAnnotations', reduce_zero_label=False),
+    dict(type='InvertBinaryLabels'),  # Custom transform
+    dict(type='RandomResize', scale=(625, 1000), ratio_range=(0.8, 1.2)),
+    dict(type='RandomCropForeground', crop_size=crop_size),  # Custom transform
+    dict(type='RandomFlip', prob=0.5),
+    dict(type='PhotoMetricDistortion', ...),
+    dict(type='PackSegInputs')
+]
+```
+
+**Training Configs (inherit from base configs):**
+1. `fcn-unet-s5-d16_...-256x256_train_test.py` - 256px, TRAIN_TEST protocol
+2. `fcn-unet-s5-d16_...-256x256_sed_intra_inter_ile.py` - 256px, sediment protocol
+3. `fcn-unet-s5-d16_...-400x400_train_test.py` - 400px, TRAIN_TEST protocol
+4. `fcn-unet-s5-d16_...-400x400_beni_hao_mak_tub.py` - 400px, BENI_HAO_MAK_TUB protocol
+
+**Model configuration:**
+- Architecture: FCN-UNet (S5-D16)
+- Loss: Dice Loss with sigmoid
+- Optimizer: SGD (lr=0.01, momentum=0.9)
+- Scheduler: PolyLR (eta_min=1e-4)
+- Training: 8000 iterations, validate every 200
+- Test mode: Sliding window (crop_size with stride=300)
+
+#### Evaluation Protocols
+**File:** `src/labkit_labeling/prepare_dataset_for_openmmseg.py`
+
+Available protocols for train/test splits:
+1. **TRAIN_TEST** (5): Standard train/test tags from FiftyOne (30% test)
+2. **BENI_INTRA_INTER_ILE** (1): Benitiers only, train on TAK island, test on all islands
+3. **BENI_INTRA_ILE** (2): Benitiers only, standard train/test split
+4. **SED_INTRA_INTER_ILE** (3): Sediments only, train on lot1, test on all sediments
+5. **SED_BENI_INTRA_INTER_ILE** (4): Combined sediment+benitier training
+6. **UNLABELLED** (6): Unlabeled samples only
+7. **BENI_HAO_MAK_TUB** (7): Benitiers from HAO, MAKEMO, TUBUAI islands
+
+Protocol files are generated as `.txt` files containing relative image paths, referenced in training configs via the `ann_file` parameter.
 
 TODO create a pull request to add this project into mmseg public repo
 
-#### Step 8.1 : train and evaluate  
+#### Step 8.1 : train and evaluate
 
-Train and eval using `mmsegmentation` 
+Train and eval using `mmsegmentation`
 ```bash
+pixi shell
 export PYTHONPATH=mmsegmentation:$PWD
-conda activate openmmlab
 
 # to reproduce exp with sed_inta_inter_ile protocol with 256*256 input size
 python mmsegmentation/tools/train.py \
@@ -303,7 +400,8 @@ mmsegmentation/projects/microplastic_detection/configs/fcn-unet-s5-d16_unet_1xb1
 #### Step 8.2 : inference to use as input for fiftyone eval
 
 ```bash
-conda activate openmmlab
+pixi shell
+export PYTHONPATH=mmsegmentation:$PWD
 
 # example of using model for inference on unlabelled data
 python mmsegmentation/tools/inference.py \
@@ -313,11 +411,12 @@ python mmsegmentation/tools/inference.py \
 --save_folder work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-400x400_train_test/inference/lot11-20-11-2023-eau
 ```
 
-#### Step 8.3 : visualize evaluations  
+#### Step 8.3 : visualize evaluations
 
 To run evaluations and visualize results in fiftyone UI, run the following :
 ```bash
-conda activate map_de
+pixi shell
+export PYTHONPATH=$PWD
 
 # example of using model for inference on unlabelled data
 python src/modeling/run_fiftyone_eval.py \
@@ -350,7 +449,9 @@ When someone adds a new lot of samples, make sure the following re-requisite are
 
 To export detections for a new lot in CSV format run :
 ```bash
-conda activate map_de
+pixi shell
+export PYTHONPATH=$PWD
+
 # export a specific unlabelled folder (ex new unlabelled lots with lot11-20-11-2023-eau)
 python src/pipeline.py export_unlabelled_folder configs/default_config.yaml \
 data/processed/create_composite/lot11-20-11-2023-eau \
@@ -359,9 +460,10 @@ data/processed/work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_dete
 
 To export all the lots, make sure that :
 - all lots are either annotated manually (labkit) or have predictions or both
-- then run the following command 
+- then run the following command
 ```bash
-conda activate map_de
+pixi shell
+export PYTHONPATH=$PWD
 
 # export annotated dataset
 python src/pipeline.py export configs/default_config.yaml data/processed/work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-256x256_train_test/inference
