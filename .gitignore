@@ -167,3 +167,5 @@ cython_debug/
 #.idea/
 /logs/
 /work_dirs/
+/.pixi/
+/.idea/
