@@ -4,7 +4,6 @@
 Generate annotated dataset from binary segmentation masks :
 - create fiftyone dataset of type segmentation masks
 - convert masks to fiftyone detections (bbox + instance mask)
-- optional : convert detections to instance segmentation polylines (for cvat)
 - compute detection attributes :
     - score based on contrast
     - connected component properties (feret diameter, particule type, ...)
@@ -100,7 +99,7 @@ def filter_dets(detections, min_area=40, max_area=400 * 400):
     return ret
 
 
-def segment_sample(mask_path) -> (fo.Detections, fo.Polylines):
+def segment_sample(mask_path) -> fo.Detections:
     bw = 255 * cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
     # add black border to avoid issues with CC at the border
     bw[0, :] = 0
@@ -111,7 +110,7 @@ def segment_sample(mask_path) -> (fo.Detections, fo.Polylines):
     dets_ = mp_act(bw)
     dets = filter_dets(dets_)
 
-    return dets_to_fodetections(dets, img_height, img_width), dets_to_fopolylines(dets, img_height, img_width)
+    return dets_to_fodetections(dets, img_height, img_width)
 
 
 def dets_to_fodetections(dets, img_height, img_width):
@@ -152,31 +151,6 @@ def dets_to_fodetections(dets, img_height, img_width):
     return fo.Detections(detections=detections)
 
 
-def dets_to_fopolylines(dets, img_height, img_width):
-    # Convert detections to FiftyOne format
-    polylines = []
-    for det in dets:
-        # A closed, filled polygon with a label
-        if det.contour.shape[0] < 3:
-            continue
-        # if det.mp_shape == "Fibers":
-        #     contour = det.contour
-        # else:
-        #     contour = cv2.convexHull(det.contour)
-        contour = det.contour
-        contour = resample_contour(contour, det.perimeter)
-        # note to regularize the shape between hull and actual shape, resample both hull and shape then make a linear
-        # combination of both
-        contour = contour / np.array([[[img_width, img_height]]])
-        polylines.append(
-            fo.Polyline(
-                label=det.mp_shape,
-                points=contour.reshape(1, -1, 2).tolist(),
-                closed=True,
-                filled=True,
-            )
-        )
-    return fo.Polylines(polylines=polylines)
 
 
 def resample_contour(contour, perimeter, pixel_spacing=7):
@@ -233,7 +207,7 @@ def compute_score(bg_color, max_contrast, box_fg_color):
     return int(100 * dif_box / max_contrast)
 
 
-def score_sample(sample, mask_key="ground_truth", det_key='detections', poly_key='polylines'):
+def score_sample(sample, mask_key="ground_truth", det_key='detections'):
     # add score based on contrast + mean color values
     img = cv2.imread(sample["filepath"])
     mask = cv2.imread(sample[mask_key]["mask_path"], cv2.IMREAD_GRAYSCALE)
@@ -241,14 +215,12 @@ def score_sample(sample, mask_key="ground_truth", det_key='detections', poly_key
     bg_color = compute_bg_color(img, mask)
     # fg_color = compute_fg_color(img, mask)
     L = np.sqrt(np.sum((bg_color - img) ** 2, axis=2))
-    for det, poly in zip(sample[det_key].detections, sample[poly_key].polylines):
+    for det in sample[det_key].detections:
         # add score
         det.score = compute_box_contrast(L, det.bounding_box, det.mask)
-        poly.score = det.score
         # add mean color
         b, g, r = compute_box_rgb(img, det.bounding_box, det.mask)
         det.mean_blue, det.mean_green, det.mean_red = r, g, b
-        poly.mean_blue, poly.mean_green, poly.mean_red = r, g, b
 
 
 def add_semantic_labels(dataset: fo.Dataset, labels_path: str, label_ext=".png") -> fo.Dataset:
@@ -284,7 +256,7 @@ def add_instance_segmentation(dataset):
         for sample in tqdm(dataset):
             filename = os.path.basename(sample["filepath"])
             sample['filename'] = filename
-            sample['detections'], sample['polylines'] = segment_sample(sample["ground_truth"]["mask_path"])
+            sample['detections'] = segment_sample(sample["ground_truth"]["mask_path"])
             score_sample(sample)
             context.save(sample)
 

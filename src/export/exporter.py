@@ -11,7 +11,7 @@ from src.labkit_labeling.generate_annotated_dataset import segment_sample, score
 Export CSVs from annotated datasets :
 - load annotated datasets
 - add predictions on unlabelled
-- recompute score on detections and polylines
+- recompute score on detections
 - export using manual annotations (labkit predictions) if exist otherwise use model predictions
 """
 
@@ -75,8 +75,8 @@ def add_prediction_on_unlabelled(dataset, labels_path, label_ext=".png"):
             mask_path = os.path.abspath(os.path.join(labels_path, rel_path))
             if os.path.exists(mask_path):
                 sample["prediction"] = fo.Segmentation(mask_path=mask_path)
-                sample['detections'], sample['polylines'] = segment_sample(sample["prediction"]["mask_path"])
-                score_sample(sample, mask_key="prediction", det_key='detections', poly_key="polylines")
+                sample['detections'] = segment_sample(sample["prediction"]["mask_path"])
+                score_sample(sample, mask_key="prediction", det_key='detections')
                 context.save(sample)
     dataset.add_dynamic_sample_fields()
     dataset.save()
@@ -85,8 +85,8 @@ def add_prediction_on_unlabelled(dataset, labels_path, label_ext=".png"):
 def add_score_on_gt_samples(dataset):
     with dataset.save_context() as context:
         for sample in tqdm(dataset.match_tags(["train", "test"])):
-            sample['detections'], sample['polylines'] = segment_sample(sample["ground_truth"]["mask_path"])
-            score_sample(sample, mask_key="ground_truth", det_key='detections', poly_key="polylines")
+            sample['detections'] = segment_sample(sample["ground_truth"]["mask_path"])
+            score_sample(sample, mask_key="ground_truth", det_key='detections')
             context.save(sample)
     dataset.add_dynamic_sample_fields()
     dataset.save()
