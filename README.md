@@ -15,11 +15,12 @@ This code is associated to the publication ** and thesis of Irène Godere
 
 ## Overview
 
-The code is structured into 4 parts :
+The code is structured into 5 modules :
 - data_prep : scripts to prepare data and create image composite
 - labkit_labeling : scripts to analyse, cluster and annotate data
-- modeling : train and eval scripts
+- modeling : fiftyone eval scripts (train and eval are done using `mmsegmentation` framework)
 - export : export dataset (fiftyone) with ground truths or predictions to csv
+- viz : use notebooks to visualize datasets
 
 The whole pipeline is depicted in the figure below :
 todo

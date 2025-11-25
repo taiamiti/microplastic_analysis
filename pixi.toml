@@ -1,0 +1,70 @@
+[project]
+name        = "microplastic_analysis"
+version     = "0.1.0"
+description = "Unified environment for microplastic analysis: data engineering + MMSegmentation modeling"
+channels    = ["conda-forge"]
+platforms   = ["linux-64"]
+
+[system-requirements]
+cuda = "11"
+
+[tool.uv]
+# forwarded to setuptools when doing *every* editable install
+config-settings = { editable_mode = "compat" }
+
+[pypi-options]                         # 👈 tell Pixi/uv where to find wheels
+index-url = "https://pypi.org/simple"
+
+
+[dependencies]
+python = "==3.9"
+pixi-pycharm = ">=0.0.8,<0.0.9"
+
+[feature.dev.pypi-dependencies]
+# Deep Learning Stack (PyTorch + MMSegmentation)
+torch = { version = "==2.0.0", index = "https://download.pytorch.org/whl/cu117" }
+torchvision = { version = "==0.15.0", index = "https://download.pytorch.org/whl/cu117" }
+torchmetrics = { version = "==0.10.3" }
+mmengine = "*"
+mmcv = { url = "https://download.openmmlab.com/mmcv/dist/cu117/torch2.0.0/mmcv-2.0.1-cp39-cp39-manylinux1_x86_64.whl" }
+mmsegmentation = ">=1.0.0"
+tensorboard = "*"
+pycocotools = "*"
+
+# Core Pipeline Dependencies
+fire = "*"                     # CLI interface for pipeline.py
+loguru = "*"                   # logging throughout pipeline
+omegaconf = "*"                # config file loading
+
+# Image Processing & Computer Vision
+opencv-python-headless = "*"   # headless to avoid GUI deps clash with mmcv and fiftyone
+easyocr = "*"                  # OCR for reading zoom metadata from images
+pyexiftool = "*"               # EXIF metadata extraction
+Pillow = "*"                   # image operations
+
+# Scientific Computing
+numpy = "<2.0"                 # keep CV/Torch era at 1.x for mmcv compatibility
+scipy = ">=1.10.1"             # scientific computing
+pandas = "*"                   # data manipulation
+
+# Machine Learning & Embeddings
+scikit-learn = "*"             # clustering algorithms
+open-clip-torch = "*"          # CRITICAL: filter type inference via CLIP embeddings
+
+# Clustering & Visualization
+umap-learn = "*"               # dimensionality reduction for annotation task creation
+cuml-cu11 = { version = "==24.8.0", index = "https://pypi.nvidia.com" }  # GPU-accelerated clustering
+plotly = "*"                   # visualization in notebooks
+
+# Dataset Management & Evaluation
+fiftyone = "==1.8.0"           # dataset management and evaluation
+shapely = "*"                  # geometry operations for fiftyone eval
+anywidget = "*"                # fiftyone plotting with plotly backend in notebooks
+
+# Development & Utilities
+jupyter = "*"                  # notebook support
+tqdm = "*"                     # progress bars
+
+[environments]
+default = { features=["dev"], solve-group = "default" }
+

@@ -1,22 +1,40 @@
-easyocr==1.6.2
+# Core pipeline dependencies
+fire>=0.5.0
+loguru>=0.7.0
+omegaconf>=2.3.0
+
+# Image processing and computer vision
+opencv-python>=4.7.0
+easyocr>=1.6.2
+pyexiftool>=0.5.5
+Pillow>=9.0.0
+
+# Scientific computing
+numpy>=1.23.5,<2.0
+scipy>=1.10.1
+pandas>=1.5.0
+
+# Machine learning
+scikit-learn>=1.2.0
+torch>=2.0.0
+open-clip-torch>=2.18.0
+
+# Clustering and dimensionality reduction
+umap-learn>=0.5.3
+
+# Dataset management and visualization
+fiftyone>=0.22.0
+plotly>=5.0.0
+
+# Utilities
+tqdm>=4.60.0
+
+# Legacy dependencies (kept for compatibility, review if still needed)
 eventlet==0.33.3
-fiftyone==0.22.0
-fqdn==1.5.1
 google-cloud-storage==2.10.0
+fqdn==1.5.1
 isoduration==20.11.0
 jsonpointer==2.3
-loguru==0.7.0
-omegaconf==2.3.0
-open-clip-torch==2.18.0
-opencv-python==4.7.0.72
-pip-chill==1.0.3
-pyexiftool==0.5.5
-umap-learn==0.5.3
 uri-template==1.2.0
 webcolors==1.13
-numpy>=1.23.5
-scikit-learn
-plotly
-tqdm
-pandas
-scipy==1.10.1
+pip-chill==1.0.3
