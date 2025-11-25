@@ -381,20 +381,21 @@ Train and eval using `mmsegmentation`
 pixi shell
 export PYTHONPATH=mmsegmentation:$PWD
 
+# to reproduce exp with beni_3_islands protocol with 400*400 input size
+python mmsegmentation/tools/train.py \
+mmsegmentation/projects/microplastic_detection/configs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-400x400_beni_hao_mak_tub.py 
+
 # to reproduce exp with sed_inta_inter_ile protocol with 256*256 input size
 python mmsegmentation/tools/train.py \
-mmsegmentation/projects/microplastic_detection/configs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-256x256_sed_intra_inter_ile.py \
---work-dir data/modeling/work_dirs
+mmsegmentation/projects/microplastic_detection/configs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-256x256_sed_intra_inter_ile.py
 
 # to reproduce exp with train_test protocol with 256*256 input size
 python mmsegmentation/tools/train.py \
-mmsegmentation/projects/microplastic_detection/configs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-256x256_train_test.py \
---work-dir data/modeling/work_dirs
+mmsegmentation/projects/microplastic_detection/configs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-256x256_train_test.py
 
 # to reproduce exp with train_test protocol with 400*400 input size
 python mmsegmentation/tools/train.py \
-mmsegmentation/projects/microplastic_detection/configs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-400x400_train_test.py \
---work-dir data/modeling/work_dirs
+mmsegmentation/projects/microplastic_detection/configs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-400x400_train_test.py
 ```
 
 #### Step 8.2 : inference to use as input for fiftyone eval
@@ -436,6 +437,70 @@ dataset.export(
     dataset_type=fo.types.FiftyOneDataset,
 )
 ```
+
+#### Step 8.5 : convert semantic segmentation to instance segmentation (optional)
+
+To add instance-level detections to your FiftyOne dataset, use the conversion script. This is useful when you want to:
+- Evaluate instance segmentation metrics (not just semantic segmentation)
+- Visualize individual detection bounding boxes in FiftyOne UI
+- Prepare data for downstream analysis without CSV export
+
+The script converts binary masks into individual Detection objects with:
+- Bounding boxes and instance masks
+- MP-VAT shape descriptors (feret diameter, circularity, roundness, area, perimeter)
+- Particle classification (Fibers, Fragments, Particles based on circularity)
+- Contrast-based quality scores
+- RGB color values at detection centers
+
+**Using the Python API:**
+```python
+import fiftyone as fo
+from src.modeling.convert_to_instance_segmentation import add_instance_segmentation_to_dataset
+
+# Load your dataset
+dataset = fo.load_dataset("mp_dataset")
+
+# Add instance detections to a new field
+add_instance_segmentation_to_dataset(
+    dataset,
+    mask_field="ground_truth",      # Source mask field to convert
+    det_field="detections",         # Target detection field to create
+    compute_scores=True,            # Compute contrast scores and RGB values
+    min_area=40,                    # Filter out detections < 40 pixels
+    max_area=160000,                # Filter out detections > 160000 pixels
+    batch_size=100                  # Save every N samples
+)
+```
+
+**Using the CLI:**
+```bash
+pixi shell
+export PYTHONPATH=$PWD
+
+# Convert ground truth masks to detections
+python src/modeling/convert_to_instance_segmentation.py convert_dataset \
+    --dataset_name mp_dataset \
+    --mask_field ground_truth \
+    --det_field detections \
+    --compute_scores True \
+    --min_area 40 \
+    --max_area 160000
+
+# Convert model predictions to detections
+python src/modeling/convert_to_instance_segmentation.py convert_dataset \
+    --dataset_name mp_dataset \
+    --mask_field predictions \
+    --det_field predicted_detections \
+    --compute_scores True
+```
+
+**Key parameters:**
+- `mask_field`: Field containing semantic segmentation masks (e.g., "ground_truth", "predictions")
+- `det_field`: New field name to store instance detections (e.g., "detections", "predicted_detections")
+- `compute_scores`: If True, computes contrast scores and RGB values (requires source images)
+- `min_area` / `max_area`: Filter detections by pixel area to remove noise and artifacts
+
+**Note:** This conversion happens in-memory on the FiftyOne dataset and does NOT modify mask files on disk. The detections field is added alongside existing mask fields, allowing evaluation of both semantic and instance segmentation metrics.
 
 ### 4. Export CSVs
 
