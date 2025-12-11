@@ -18,12 +18,48 @@ This code is associated to the publication ** and thesis of Irène Godere
 The code is structured into 5 modules :
 - data_prep : scripts to prepare data and create image composite
 - labkit_labeling : scripts to analyse, cluster and annotate data
-- modeling : fiftyone eval scripts (train and eval are done using `mmsegmentation` framework)
+- modeling : training with mmsegmentation + evaluation with FiftyOne (semantic & instance segmentation)
 - export : export dataset (fiftyone) with ground truths or predictions to csv
 - viz : use notebooks to visualize datasets
 
-The whole pipeline is depicted in the figure below :
-todo
+### Quick Start: Evaluation Workflow
+
+For evaluating trained models with both semantic and instance segmentation metrics:
+
+```bash
+# Step 1: Add predictions
+python src/modeling/add_predictions.py \
+  --dataset_name mp_dataset \
+  --predictions_dir data/modeling/work_dirs/model/inference \
+  --config_name <your_config>.py
+
+# Step 2: Evaluate semantic segmentation
+python src/modeling/evaluate_sem_seg.py \
+  --dataset_name mp_dataset \
+  --pred_field predictions_<config_short_name> \
+  --filter_tags test
+
+# Step 3: Convert ground truth to instances (once per dataset)
+python src/modeling/convert_to_instance_segmentation.py convert_dataset \
+  --dataset_name mp_dataset \
+  --mask_field ground_truth \
+  --det_field inst_ground_truth
+
+# Step 4: Convert predictions to instances
+python src/modeling/convert_to_instance_segmentation.py convert_dataset \
+  --dataset_name mp_dataset \
+  --mask_field predictions_<config_short_name> \
+  --det_field inst_predictions_<config_short_name>
+
+# Step 5: Evaluate instance segmentation
+python src/modeling/evaluate_inst_seg.py \
+  --dataset_name mp_dataset \
+  --pred_field inst_predictions_<config_short_name> \
+  --gt_field inst_ground_truth \
+  --filter_tags test
+```
+
+See [Step 8.3](#step-83--evaluate-models-semantic-and-instance-segmentation) for detailed instructions and [docs/EVALUATION_WORKFLOW.md](docs/EVALUATION_WORKFLOW.md) for complete documentation.
 
 ## Installation
 
@@ -274,7 +310,18 @@ python src/pipeline.py prepare_dataset_for_openmmseg configs/default_config.yaml
 ### 3. Modeling
 
 Use `openmmseg` framework to train, evaluate and predict segmentation masks for microplastic detection.
-Follow their installation instruction to create a conda environment.
+
+**Modeling Workflow Overview:**
+1. **Train models** using mmsegmentation with custom dataset and transforms
+2. **Run inference** on test/unlabeled data to generate prediction masks
+3. **Evaluate performance** using the new modular evaluation system:
+   - Semantic segmentation metrics (IoU, Dice, precision, recall)
+   - Instance segmentation metrics (mAP, per-detection precision/recall)
+   - Multi-model comparison on the same FiftyOne dataset
+
+**Evaluation System:**
+- **New (Recommended):** `src/modeling/evaluate_segmentation.py` - Modular CLI supporting both semantic and instance evaluation
+- **Legacy:** `src/modeling/run_fiftyone_eval.py` - Original evaluation script (still supported)
 
 Our contributions to mmseg :
 
@@ -383,7 +430,7 @@ export PYTHONPATH=mmsegmentation:$PWD
 
 # to reproduce exp with beni_3_islands protocol with 400*400 input size
 python mmsegmentation/tools/train.py \
-mmsegmentation/projects/microplastic_detection/configs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-400x400_beni_hao_mak_tub.py 
+mmsegmentation/projects/microplastic_detection/configs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-256x256_beni_hao_mak_tub.py 
 
 # to reproduce exp with sed_inta_inter_ile protocol with 256*256 input size
 python mmsegmentation/tools/train.py \
@@ -396,6 +443,10 @@ mmsegmentation/projects/microplastic_detection/configs/fcn-unet-s5-d16_unet_1xb1
 # to reproduce exp with train_test protocol with 400*400 input size
 python mmsegmentation/tools/train.py \
 mmsegmentation/projects/microplastic_detection/configs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-400x400_train_test.py
+
+python mmsegmentation/tools/train.py \
+mmsegmentation/projects/microplastic_detection/configs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-400x400_beni_hao_mak_tub.py 
+
 ```
 
 #### Step 8.2 : inference to use as input for fiftyone eval
@@ -410,23 +461,156 @@ python mmsegmentation/tools/inference.py \
 --model_ckpts work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-400x400_train_test/best_mIoU_iter_2800.pth \
 --img_folder data/processed/create_composite/lot11-20-11-2023-eau/data \
 --save_folder work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-400x400_train_test/inference/lot11-20-11-2023-eau
+
+# reproduce article beni
+./scripts/run_inference_article_beni.sh
 ```
 
-#### Step 8.3 : visualize evaluations
+#### Step 8.3 : evaluate models (semantic and instance segmentation)
 
-To run evaluations and visualize results in fiftyone UI, run the following :
+**Granular Evaluation Workflow (Recommended)**
+
+Use the modular evaluation scripts for step-by-step semantic and instance segmentation evaluation:
+
 ```bash
 pixi shell
 export PYTHONPATH=$PWD
 
-# example of using model for inference on unlabelled data
-python src/modeling/run_fiftyone_eval.py \
-data/processed/generate_annotated_dataset \
-data/processed/work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-256x256_train_test/inference \
---eval_bool True
+# Example for article beni evaluations
+config=fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-400x400_beni_hao_mak_tub
+dataset=mp_article_beni
+
+# Step 1: Add predictions to dataset
+python src/modeling/add_predictions.py \
+  --dataset_name $dataset \
+  --predictions_dir work_dirs/$config/inference \
+  --config_name $config.py \
+  --filter_tags test
+
+# Step 2: Evaluate semantic segmentation (IoU, Dice, precision, recall)
+python src/modeling/evaluate_sem_seg.py \
+  --dataset_name $dataset \
+  --pred_field predictions_400x400_beni_hao_mak_tub \
+  --filter_tags test
+
+# Step 3: Convert ground truth to instances (ONCE per dataset)
+python src/modeling/convert_to_instance_segmentation.py \
+  --dataset_name $dataset \
+  --mask_field ground_truth \
+  --det_field inst_ground_truth \
+  --filter_tags test
+
+# Step 4: Convert predictions to instances
+python src/modeling/convert_to_instance_segmentation.py \
+  --dataset_name $dataset \
+  --mask_field predictions_400x400_beni_hao_mak_tub \
+  --det_field inst_predictions_400x400_beni_hao_mak_tub \
+  --filter_tags test
+
+# Step 5: Evaluate instance segmentation (mAP, per-instance metrics)
+python src/modeling/evaluate_inst_seg.py \
+  --dataset_name $dataset \
+  --pred_field inst_predictions_400x400_beni_hao_mak_tub \
+  --gt_field inst_ground_truth \
+  --filter_tags test
 ```
 
-#### Step 8.4 (optional) : save dataset to disk
+**Key Features:**
+- Granular control: Run individual steps for easier debugging
+- Config-based field naming prevents conflicts when evaluating multiple models
+- Supports both semantic and instance segmentation evaluation
+- Uses existing `convert_to_instance_segmentation.py` for mask-to-instance conversion
+- Conversion script remains standalone for future instance segmentation training workflows
+
+See `docs/EVALUATION_WORKFLOW.md` for detailed documentation and examples.
+
+**Legacy Workflow (Old Method)**
+
+For backward compatibility, the old evaluation script is still available:
+```bash
+pixi shell
+export PYTHONPATH=$PWD
+
+# Create dataset and run evaluation
+python src/modeling/run_fiftyone_eval.py \
+  data/processed/generate_annotated_dataset \
+  data/processed/work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-256x256_train_test/inference \
+  --eval_bool True
+```
+
+#### Step 8.4 : compare multiple models
+
+The evaluation system allows you to evaluate multiple models on the same FiftyOne dataset without field conflicts:
+
+```bash
+pixi shell
+export PYTHONPATH=$PWD
+
+# Evaluate Model 1: 400x400 train_test
+config1=fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-400x400_train_test
+
+python src/modeling/add_predictions.py \
+  --dataset_name mp_dataset \
+  --predictions_dir data/modeling/work_dirs/$config1/inference \
+  --config_name $config1.py
+
+python src/modeling/evaluate_sem_seg.py \
+  --dataset_name mp_dataset \
+  --pred_field predictions_400x400_train_test \
+  --filter_tags test
+
+python src/modeling/convert_to_instance_segmentation.py convert_dataset \
+  --dataset_name mp_dataset \
+  --mask_field predictions_400x400_train_test \
+  --det_field inst_predictions_400x400_train_test
+
+python src/modeling/evaluate_inst_seg.py eval_instances \
+  --dataset_name mp_dataset \
+  --pred_field inst_predictions_400x400_train_test \
+  --gt_field inst_ground_truth \
+  --filter_tags test
+
+# Evaluate Model 2: 256x256 sed_intra_inter_ile
+config2=fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-256x256_sed_intra_inter_ile
+
+python src/modeling/add_predictions.py \
+  --dataset_name mp_dataset \
+  --predictions_dir data/modeling/work_dirs/$config2/inference \
+  --config_name $config2.py
+
+python src/modeling/evaluate_sem_seg.py \
+  --dataset_name mp_dataset \
+  --pred_field predictions_256x256_sed_intra_inter_ile \
+  --filter_tags test
+
+python src/modeling/convert_to_instance_segmentation.py convert_dataset \
+  --dataset_name mp_dataset \
+  --mask_field predictions_256x256_sed_intra_inter_ile \
+  --det_field inst_predictions_256x256_sed_intra_inter_ile
+
+python src/modeling/evaluate_inst_seg.py eval_instances \
+  --dataset_name mp_dataset \
+  --pred_field inst_predictions_256x256_sed_intra_inter_ile \
+  --gt_field inst_ground_truth \
+  --filter_tags test
+
+# Now mp_dataset contains:
+# - predictions_400x400_train_test & predictions_256x256_sed_intra_inter_ile
+# - inst_predictions_400x400_train_test & inst_predictions_256x256_sed_intra_inter_ile
+# - eval_400x400_train_test & eval_256x256_sed_intra_inter_ile
+# - eval_inst_400x400_train_test & eval_inst_256x256_sed_intra_inter_ile
+```
+
+Compare results in FiftyOne App:
+```python
+import fiftyone as fo
+
+dataset = fo.load_dataset("mp_dataset")
+session = fo.launch_app(dataset.match_tags("test"))
+# Toggle between prediction fields in the UI to compare models
+```
+
+#### Step 8.5 (optional) : save dataset to disk
 
 ```python
 import fiftyone as fo
@@ -438,19 +622,10 @@ dataset.export(
 )
 ```
 
-#### Step 8.5 : convert semantic segmentation to instance segmentation (optional)
+#### Step 8.6 (optional) : advanced instance conversion
 
-To add instance-level detections to your FiftyOne dataset, use the conversion script. This is useful when you want to:
-- Evaluate instance segmentation metrics (not just semantic segmentation)
-- Visualize individual detection bounding boxes in FiftyOne UI
-- Prepare data for downstream analysis without CSV export
-
-The script converts binary masks into individual Detection objects with:
-- Bounding boxes and instance masks
-- MP-VAT shape descriptors (feret diameter, circularity, roundness, area, perimeter)
-- Particle classification (Fibers, Fragments, Particles based on circularity)
-- Contrast-based quality scores
-- RGB color values at detection centers
+The new evaluation workflow automatically converts semantic masks to instance segmentation (see Step 8.3).
+However, you can also manually convert masks using the standalone conversion script for custom use cases:
 
 **Using the Python API:**
 ```python
@@ -485,22 +660,18 @@ python src/modeling/convert_to_instance_segmentation.py convert_dataset \
     --compute_scores True \
     --min_area 40 \
     --max_area 160000
-
-# Convert model predictions to detections
-python src/modeling/convert_to_instance_segmentation.py convert_dataset \
-    --dataset_name mp_dataset \
-    --mask_field predictions \
-    --det_field predicted_detections \
-    --compute_scores True
 ```
 
-**Key parameters:**
-- `mask_field`: Field containing semantic segmentation masks (e.g., "ground_truth", "predictions")
-- `det_field`: New field name to store instance detections (e.g., "detections", "predicted_detections")
-- `compute_scores`: If True, computes contrast scores and RGB values (requires source images)
-- `min_area` / `max_area`: Filter detections by pixel area to remove noise and artifacts
+**Detection Attributes:**
+Each instance includes MP-VAT shape descriptors:
+- `area`, `perimeter`
+- `feret_diameter`, `feret_degree`
+- `circularity`, `roundness`
+- `mp_shape`: Classification (Fibers, Fragments, Particles)
+- `score`: Contrast-based quality metric
+- `mean_red`, `mean_green`, `mean_blue`: RGB values
 
-**Note:** This conversion happens in-memory on the FiftyOne dataset and does NOT modify mask files on disk. The detections field is added alongside existing mask fields, allowing evaluation of both semantic and instance segmentation metrics.
+**Note:** The new `evaluate_segmentation.py` script (Step 8.3) handles this conversion automatically with the `inst_` prefix convention.
 
 ### 4. Export CSVs
 

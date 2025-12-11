@@ -1,15 +1,40 @@
 _base_ = [
-    './microplastic_detection_256x256.py',
+    './microplastic_detection_400x400.py',
     'mmseg::_base_/models/fcn_unet_s5-d16.py',
     'mmseg::_base_/default_runtime.py',
     # 'mmseg::_base_/schedules/schedule_20k.py'
 ]
-train_dataloader = dict(dataset=dict(ann_file='train_EvalProtocol_BENI_HAO_MAK_TUB.txt'))
+
+# Override crop_size
+crop_size = (400, 400)
+
+# Override train pipeline to use RandomCropChoice (80% foreground, 20% random)
+train_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(type='LoadAnnotations', reduce_zero_label=False),
+    dict(type='InvertBinaryLabels'),
+    dict(
+        type='RandomResize',
+        scale=(625, 1000),
+        ratio_range=(0.8, 1.2),
+        keep_ratio=True),
+    dict(type='RandomCropChoice', crop_size=crop_size, foreground_prob=0.8, corner_prob=0.1, cat_max_ratio=0.75),
+    dict(type='RandomFlip', prob=0.5),
+    dict(type='PhotoMetricDistortion',
+         brightness_delta=32, contrast_range=(0.7, 1.3), saturation_range=(0.7, 1.3),
+         hue_delta=2),
+    dict(type='PackSegInputs')
+]
+
+train_dataloader = dict(
+    dataset=dict(
+        ann_file='train_EvalProtocol_BENI_HAO_MAK_TUB.txt',
+        pipeline=train_pipeline
+    )
+)
 test_dataloader = dict(dataset=dict(ann_file='test_EvalProtocol_BENI_HAO_MAK_TUB.txt'))
 
 custom_imports = dict(imports='mmseg.datasets.microplastic')
-# model config overrides
-crop_size = (400, 400)
 data_preprocessor = dict(size=crop_size, pad_val=0, seg_pad_val=0)
 model = dict(
     data_preprocessor=data_preprocessor,
@@ -31,6 +56,7 @@ model = dict(
 # runtime config overrides
 # Uncomment and update the path below if you want to load from a pretrained checkpoint
 # load_from = "/path/to/your/checkpoint.pth"
+load_from = "./work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-256x256_train_test/best_mIoU_iter_6200.pth"
 vis_backends = [dict(type='TensorboardVisBackend'), dict(type='LocalVisBackend')]
 visualizer = dict(vis_backends=vis_backends)
 
@@ -54,9 +80,24 @@ test_cfg = dict(type='TestLoop')
 # other args from base config for this variable
 default_hooks = dict(
     timer=dict(type='IterTimerHook'),
-    logger=dict(type='LoggerHook', log_metric_by_epoch=False, interval=50),  # log after k iterations
+    logger=dict(type='LoggerHook', log_metric_by_epoch=False, interval=50),
     param_scheduler=dict(type='ParamSchedulerHook'),
-    checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=200, save_best=['mIoU'], rule='greater'),
+    checkpoint=dict(
+        type='CheckpointHook',
+        by_epoch=False,
+        interval=200,
+        save_best='mIoU',
+        rule='greater',
+        max_keep_ckpts=1,
+        save_last=True
+    ),
     sampler_seed=dict(type='DistSamplerSeedHook'),
-    visualization=dict(type='SegVisualizationHook', draw=True, interval=30)  # batch = 1 so it will be every 50 images
+    visualization=dict(type='SegVisualizationHook', draw=True, interval=30),
+    early_stopping=dict(
+        type='EarlyStoppingHook',
+        monitor='mIoU',
+        rule='greater',
+        patience=8,
+        min_delta=0.001
+    )
 )

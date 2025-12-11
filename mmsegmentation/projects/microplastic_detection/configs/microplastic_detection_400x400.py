@@ -1,5 +1,5 @@
 dataset_type = 'MicroPlasticDataset'
-data_root = 'data/processed/prepare_dataset_for_openmmseg'
+data_root = 'data/processed/prepare_dataset_for_openmmseg2'
 crop_size = (400, 400)
 custom_imports = dict(imports='mmseg.datasets.transforms.custom_transforms')
 train_pipeline = [
@@ -54,5 +54,5 @@ val_dataloader = dict(
         data_prefix=dict(img_path='data', seg_map_path='labels'),
         pipeline=test_pipeline))
 test_dataloader = val_dataloader
-val_evaluator = dict(type='IoUMetric', iou_metrics=['mIoU', 'mDice'])
-test_evaluator = dict(type='IoUMetric', iou_metrics=['mIoU', 'mDice'])
+val_evaluator = dict(type='IoUMetric', iou_metrics=['mIoU', 'mDice', 'mFscore'])
+test_evaluator = dict(type='IoUMetric', iou_metrics=['mIoU', 'mDice', 'mFscore'])

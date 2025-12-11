@@ -89,12 +89,40 @@ python mmsegmentation/tools/inference.py \
   --img_folder <input_folder> \
   --save_folder <output_folder>
 
-# Evaluate with FiftyOne
+# Evaluate with FiftyOne (granular workflow)
 conda activate map_de
-python src/modeling/run_fiftyone_eval.py \
-  data/processed/generate_annotated_dataset \
-  <inference_output_dir> \
-  --eval_bool True
+export PYTHONPATH=$PWD
+
+# Step 1: Add predictions
+python src/modeling/add_predictions.py \
+  --dataset_name mp_dataset \
+  --predictions_dir <inference_output_dir> \
+  --config_name <config>.py
+
+# Step 2: Evaluate semantic segmentation
+python src/modeling/evaluate_sem_seg.py \
+  --dataset_name mp_dataset \
+  --pred_field predictions_<config_short_name> \
+  --filter_tags test
+
+# Step 3: Convert to instances (once for GT)
+python src/modeling/convert_to_instance_segmentation.py convert_dataset \
+  --dataset_name mp_dataset \
+  --mask_field ground_truth \
+  --det_field inst_ground_truth
+
+# Step 4: Convert predictions to instances
+python src/modeling/convert_to_instance_segmentation.py convert_dataset \
+  --dataset_name mp_dataset \
+  --mask_field predictions_<config_short_name> \
+  --det_field inst_predictions_<config_short_name>
+
+# Step 5: Evaluate instance segmentation
+python src/modeling/evaluate_inst_seg.py eval_instances \
+  --dataset_name mp_dataset \
+  --pred_field inst_predictions_<config_short_name> \
+  --gt_field inst_ground_truth \
+  --filter_tags test
 ```
 
 ### Export Results to CSV

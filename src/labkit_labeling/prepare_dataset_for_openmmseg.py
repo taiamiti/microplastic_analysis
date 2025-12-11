@@ -83,6 +83,7 @@ def write_annot_file(file_list, save_dir, subset, protocol):
 def main(ds_root, save_dir):
     ds_paths = [os.path.join(ds_root, ds_path) for ds_path in os.listdir(ds_root)]
     ds = load_dataset_from_multiple_sources(ds_paths)
+
     # ds.match_tags("unlabelled")
     # ds.match_tags("test").match(F('sample_type').is_in(("BENI", "CBENI")))
     # ds.count_sample_tags()
@@ -103,13 +104,13 @@ def main(ds_root, save_dir):
     # session.view = view_filtered_out
     # merged_view_clean.match_tags("test").match(F('sample_type').is_in(("BENI", "CBENI")))
 
-    ds.export(
-        export_dir=save_dir,
-        dataset_type=fo.types.ImageSegmentationDirectory,
-        label_field='detections',
-        export_media=True,
-        rel_dir=os.path.abspath(ds_root)
-    )
+    # ds.export(
+    #     export_dir=save_dir,
+    #     dataset_type=fo.types.ImageSegmentationDirectory,
+    #     label_field='detections',
+    #     export_media=True,
+    #     rel_dir=os.path.abspath(ds_root)
+    # )
 
     fullpath_prefix = os.path.abspath(ds_root)
     for protocol in EvalProtocol:
@@ -117,7 +118,6 @@ def main(ds_root, save_dir):
             file_list = get_relative_img_paths(ds, "unlabelled", protocol, fullpath_prefix)
             write_annot_file(file_list, save_dir, "unlabelled", protocol)
         for subset in ["train", "test"]:
-            #         file_list = get_relative_img_paths(merged_view_clean, subset, protocol, fullpath_prefix)
             file_list = get_relative_img_paths(ds, subset, protocol, fullpath_prefix)
             write_annot_file(file_list, save_dir, subset, protocol)
 

@@ -14,7 +14,7 @@ from .transforms import (CLAHE, AdjustGamma, Albu, BioMedical3DPad,
                          ResizeShortestEdge, ResizeToMultiple, RGB2Gray,
                          SegRescale)
 
-from .custom_transforms import InvertBinaryLabels
+from .custom_transforms import InvertBinaryLabels, RandomCropChoice
 
 # yapf: enable
 __all__ = [
@@ -26,5 +26,5 @@ __all__ = [
     'ResizeShortestEdge', 'BioMedicalGaussianNoise', 'BioMedicalGaussianBlur',
     'BioMedical3DRandomFlip', 'BioMedicalRandomGamma', 'BioMedical3DPad',
     'RandomRotFlip', 'Albu', 'LoadSingleRSImageFromFile', 'ConcatCDInput',
-    'LoadMultipleRSImageFromFile', 'InvertBinaryLabels'
+    'LoadMultipleRSImageFromFile', 'InvertBinaryLabels', 'RandomCropChoice'
 ]

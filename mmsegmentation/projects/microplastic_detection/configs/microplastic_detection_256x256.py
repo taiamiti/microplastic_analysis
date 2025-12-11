@@ -54,5 +54,5 @@ val_dataloader = dict(
         data_prefix=dict(img_path='data', seg_map_path='labels'),
         pipeline=test_pipeline))
 test_dataloader = val_dataloader
-val_evaluator = dict(type='IoUMetric', iou_metrics=['mIoU', 'mDice'])
-test_evaluator = dict(type='IoUMetric', iou_metrics=['mIoU', 'mDice'])
+val_evaluator = dict(type='IoUMetric', iou_metrics=['mIoU', 'mDice', 'mFscore'])
+test_evaluator = dict(type='IoUMetric', iou_metrics=['mIoU', 'mDice', 'mFscore'])

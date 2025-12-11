@@ -29,7 +29,7 @@ model = dict(
     )
 
 # runtime config overrides
-load_from = "/home/taiamiti/Projects/mmsegmentation/work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-256x256_train_test/best_mIoU_iter_6200.pth"
+load_from = "work_dirs/fcn-unet-s5-d16_unet_1xb16-0.0001-20k_microplastic_detection-256x256_train_test/best_mIoU_iter_6200.pth"
 vis_backends = [dict(type='TensorboardVisBackend'), dict(type='LocalVisBackend')]
 visualizer = dict(vis_backends=vis_backends)
 
@@ -53,11 +53,26 @@ test_cfg = dict(type='TestLoop')
 # other args from base config for this variable
 default_hooks = dict(
     timer=dict(type='IterTimerHook'),
-    logger=dict(type='LoggerHook', log_metric_by_epoch=False, interval=50),  # log after k iterations
+    logger=dict(type='LoggerHook', log_metric_by_epoch=False, interval=50),
     param_scheduler=dict(type='ParamSchedulerHook'),
-    checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=200, save_best=['mIoU'], rule='greater'),
+    checkpoint=dict(
+        type='CheckpointHook',
+        by_epoch=False,
+        interval=200,
+        save_best='mIoU',
+        rule='greater',
+        max_keep_ckpts=1,
+        save_last=True
+    ),
     sampler_seed=dict(type='DistSamplerSeedHook'),
-    visualization=dict(type='SegVisualizationHook', draw=True, interval=30)  # batch = 1 so it will be every 50 images
+    visualization=dict(type='SegVisualizationHook', draw=True, interval=30),
+    early_stopping=dict(
+        type='EarlyStoppingHook',
+        monitor='mIoU',
+        rule='greater',
+        patience=8,
+        min_delta=0.001
+    )
 )
 
 

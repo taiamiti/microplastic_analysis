@@ -13,6 +13,11 @@ Each instance includes MP-VAT shape descriptors:
 - mp_shape (Fibers, Fragments, Particles)
 - score (contrast-based quality metric)
 - mean RGB values
+
+IMPORTANT: For prediction fields, confidence scores are automatically set based on
+contrast-based quality metrics (required for mAP computation). If compute_scores=True,
+the contrast score is used as confidence; otherwise defaults to 1.0. The script
+auto-detects prediction fields by checking if the mask_field name starts with "prediction".
 """
 
 import os
@@ -81,7 +86,8 @@ def convert_sample_to_instances(
     mask_field: str = "ground_truth",
     compute_scores: bool = True,
     min_area: int = 40,
-    max_area: int = 160000
+    max_area: int = 160000,
+    is_prediction: bool = False
 ) -> fo.Detections:
     """
     Convert a single sample's semantic mask to instance segmentation.
@@ -92,6 +98,7 @@ def convert_sample_to_instances(
         compute_scores: Whether to compute contrast scores
         min_area: Minimum area filter
         max_area: Maximum area filter
+        is_prediction: Whether this is a prediction (sets confidence=1.0) or ground truth
 
     Returns:
         FiftyOne Detections with instance masks and MP-VAT attributes
@@ -115,7 +122,7 @@ def convert_sample_to_instances(
     # Convert to FiftyOne Detections
     fo_detections = dets_to_fodetections(dets, img_height, img_width)
 
-    # Compute scores if requested
+    # Compute scores and set confidence if requested
     if compute_scores and img is not None:
         # Resize mask to image size if needed
         if img.shape[:2] != mask.shape[:2]:
@@ -130,13 +137,22 @@ def convert_sample_to_instances(
         # Add scores and RGB values to each detection
         for det in fo_detections.detections:
             # Compute contrast score
-            det.score = compute_box_contrast(L, det.bounding_box, det.mask)
+            contrast_score = compute_box_contrast(L, det.bounding_box, det.mask)
+            det.score = contrast_score
+
+            # For predictions, use contrast score as confidence (required for mAP)
+            if is_prediction:
+                det.confidence = contrast_score
 
             # Compute mean RGB values
             b, g, r = compute_box_rgb(img, det.bounding_box, det.mask)
             det.mean_blue = r
             det.mean_green = g
             det.mean_red = b
+    elif is_prediction:
+        # If scores not computed but this is a prediction, set default confidence
+        for det in fo_detections.detections:
+            det.confidence = 1.0
 
     return fo_detections
 
@@ -148,7 +164,8 @@ def add_instance_segmentation_to_dataset(
     compute_scores: bool = True,
     min_area: int = 40,
     max_area: int = 160000,
-    batch_size: int = 100
+    batch_size: int = 100,
+    filter_tags: Optional[str] = None
 ) -> fo.Dataset:
     """
     Add instance segmentation detections to all samples in a FiftyOne dataset.
@@ -161,14 +178,33 @@ def add_instance_segmentation_to_dataset(
         min_area: Minimum area threshold for filtering detections
         max_area: Maximum area threshold for filtering detections
         batch_size: Number of samples to process before saving
+        filter_tags: Optional tag to filter samples (e.g., 'test')
 
     Returns:
         Updated FiftyOne dataset with instance segmentation detections
+
+    Note:
+        If mask_field starts with "prediction", confidence scores will be automatically
+        set for all detections (required for mAP computation). With compute_scores=True,
+        the contrast-based quality score is used as confidence. Otherwise, defaults to 1.0.
     """
     # Filter samples that have the mask field
     view = dataset.exists(mask_field)
 
+    # Filter by tags if specified
+    if filter_tags:
+        view = view.match_tags(filter_tags)
+        print(f"Filtering to samples with tag: {filter_tags}")
+
     print(f"Converting {len(view)} samples from {mask_field} to {det_field}...")
+
+    # Auto-detect if this is prediction field (requires confidence scores)
+    is_prediction = mask_field.startswith("prediction")
+    if is_prediction:
+        if compute_scores:
+            print("Detected prediction field - using contrast score as confidence")
+        else:
+            print("Detected prediction field - setting confidence=1.0 for all detections")
 
     # Process in batches for efficiency
     with dataset.save_context() as context:
@@ -180,7 +216,8 @@ def add_instance_segmentation_to_dataset(
                     mask_field=mask_field,
                     compute_scores=compute_scores,
                     min_area=min_area,
-                    max_area=max_area
+                    max_area=max_area,
+                    is_prediction=is_prediction
                 )
 
                 # Add detections to sample
@@ -209,7 +246,8 @@ def convert_dataset_cli(
     compute_scores: bool = True,
     min_area: int = 40,
     max_area: int = 160000,
-    batch_size: int = 100
+    batch_size: int = 100,
+    filter_tags: Optional[str] = None
 ):
     """
     CLI wrapper: Load a FiftyOne dataset by name and add instance segmentation.
@@ -222,6 +260,12 @@ def convert_dataset_cli(
         min_area: Minimum area threshold for filtering detections
         max_area: Maximum area threshold for filtering detections
         batch_size: Number of samples to process before saving
+        filter_tags: Optional tag to filter samples (e.g., 'test')
+
+    Note:
+        If mask_field starts with "prediction", confidence scores will be automatically
+        set for all detections (required for mAP computation). With compute_scores=True,
+        the contrast-based quality score is used as confidence. Otherwise, defaults to 1.0.
     """
     # Load dataset
     dataset = fo.load_dataset(dataset_name)
@@ -234,14 +278,12 @@ def convert_dataset_cli(
         compute_scores=compute_scores,
         min_area=min_area,
         max_area=max_area,
-        batch_size=batch_size
+        batch_size=batch_size,
+        filter_tags=filter_tags
     )
 
     print(f"Dataset '{dataset_name}' updated successfully!")
 
 
 if __name__ == '__main__':
-    fire.Fire({
-        'convert_dataset': convert_dataset_cli,
-        'convert_mask': mask_to_instances
-    })
+    fire.Fire(convert_dataset_cli)

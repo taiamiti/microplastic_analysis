@@ -4,12 +4,37 @@ _base_ = [
     'mmseg::_base_/default_runtime.py',
     # 'mmseg::_base_/schedules/schedule_20k.py'
 ]
-train_dataloader = dict(dataset=dict(ann_file='train_EvalProtocol_SED_INTRA_INTER_ILE.txt'))
-test_dataloader = dict(dataset=dict(ann_file='test_EvalProtocol_SED_INTRA_INTER_ILE.txt'))
+
+# Override crop_size
+crop_size = (256, 256)
+
+# Override train pipeline to use RandomCropChoice (80% foreground, 20% random)
+train_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(type='LoadAnnotations', reduce_zero_label=False),
+    dict(type='InvertBinaryLabels'),
+    dict(
+        type='RandomResize',
+        scale=(640, 400),
+        ratio_range=(0.8, 1.2),
+        keep_ratio=True),
+    dict(type='RandomCropChoice', crop_size=crop_size, foreground_prob=0.8, corner_prob=0.1, cat_max_ratio=0.75),
+    dict(type='RandomFlip', prob=0.5),
+    dict(type='PhotoMetricDistortion',
+         brightness_delta=32, contrast_range=(0.7, 1.3), saturation_range=(0.7, 1.3),
+         hue_delta=2),
+    dict(type='PackSegInputs')
+]
+
+train_dataloader = dict(
+    dataset=dict(
+        ann_file='train_EvalProtocol_BENI_HAO_MAK_TUB.txt',
+        pipeline=train_pipeline
+    )
+)
+test_dataloader = dict(dataset=dict(ann_file='test_EvalProtocol_BENI_HAO_MAK_TUB.txt'))
 
 custom_imports = dict(imports='mmseg.datasets.microplastic')
-# model config overrides
-crop_size = (256, 256)
 data_preprocessor = dict(size=crop_size, pad_val=0, seg_pad_val=0)
 model = dict(
     data_preprocessor=data_preprocessor,
@@ -29,7 +54,8 @@ model = dict(
     )
 
 # runtime config overrides
-load_from = None  # todo add pretrained model
+# Uncomment and update the path below if you want to load from a pretrained checkpoint
+# load_from = "/path/to/your/checkpoint.pth"
 vis_backends = [dict(type='TensorboardVisBackend'), dict(type='LocalVisBackend')]
 visualizer = dict(vis_backends=vis_backends)
 
@@ -46,7 +72,7 @@ param_scheduler = [
         end=4000,
         by_epoch=False)
 ]
-train_cfg = dict(type='IterBasedTrainLoop', max_iters=4000, val_interval=200)
+train_cfg = dict(type='IterBasedTrainLoop', max_iters=8000, val_interval=200)
 # train_cfg = dict(type='EpochBasedTrainLoop', max_epochs=50, val_interval=1)  # delete true ignore
 val_cfg = dict(type='ValLoop')
 test_cfg = dict(type='TestLoop')
@@ -70,9 +96,7 @@ default_hooks = dict(
         type='EarlyStoppingHook',
         monitor='mIoU',
         rule='greater',
-        patience=8,
+        patience=5,
         min_delta=0.001
     )
 )
-
-

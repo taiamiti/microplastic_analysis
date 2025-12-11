@@ -68,3 +68,17 @@ tqdm = "*"                     # progress bars
 [environments]
 default = { features=["dev"], solve-group = "default" }
 
+[scripts]
+fix-mmseg-mim = """
+MMSEG_DIR=$(python - <<'EOF'
+import mmseg, os
+print(os.path.dirname(mmseg.__file__))
+EOF
+)
+
+mkdir -p "$MMSEG_DIR/.mim"
+cp ./mmsegmentation/model-index.yml "$MMSEG_DIR/.mim/model-index.yml"
+"""
+
+[post-install]
+commands = ["fix-mmseg-mim"]
